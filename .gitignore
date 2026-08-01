@@ -1,0 +1,12 @@
+.DS_Store
+obj_dir/
+*.vcd
+*.fst
+.Xil/
+*.jou
+*.log
+*.cache/
+*.runs/
+*.sim/
+*.gen/
+*.hw/
