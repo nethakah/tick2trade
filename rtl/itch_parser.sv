@@ -1,21 +1,18 @@
 module itch_parser 
+    import msg_pkg::*;
 (
     input logic clk,
     input logic rst_n, // active LO
 
-    input logic [7:0] byte_in,
-    input logic byte_valid,
+    // Slave - raw ITCH byte stream in
+    input logic [7:0] s_axis_tdata,
+    input logic       s_axis_tvalid,
+    output logic      s_axis_tready, // backpressure
 
-    output logic        msg_valid,
-    output msg_type_e   msg_type,
-    output logic [15:0] msg_locate, // order book array index (stock locate)
-    output logic [47:0] msg_timestamp,
-    output logic [63:0] msg_order_refnum,
-    output logic        msg_is_buy,
-    output logic [31:0] msg_shares,
-    output logic [63:0] msg_stock,
-    output logic [31:0] msg_price,
-    output logic [63:0] msg_match_num
+    // Master - parsed msg out
+    output msg_t      m_axis_tdata, // 325b packed msg
+    output logic      m_axis_tvalid,
+    input logic       m_axis_tready
 );
 
 endmodule
