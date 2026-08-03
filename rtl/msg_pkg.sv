@@ -20,8 +20,29 @@ package msg_pkg;
         logic [63:0] stock;         // @24 8-char ASCII symbol ('A')
         logic [31:0] price;         // @32 raw fixed-point (4 decimals implied)
         
-        // misc
+        // misc (for later when we add other msg types)
         logic [63:0] match_num;     // @23 match number ('E') (day unique to identify this specific execution)
     } msg_t;
 
+    function automatic logic [5:0] msg_length( // bytes
+    input logic [7:0] type_byte); 
+        case (type_byte)
+            // offset of last field + len of last field
+            "A": msg_length = 6'd36;
+            "E": msg_length = 6'd31;
+            "D": msg_length = 6'd19;
+            default: msg_length = 6'd0; 
+        endcase
+    endfunction
+
+    function automatic msgtype_enum decode_type(
+    input logic [7:0] type_byte); 
+        case (type_byte)
+            "A": decode_type = MSG_ADD;
+            "E": decode_type = MSG_EXC;
+            "D": decode_type = MSG_DEL;
+            default: deocde_type = MSG_NONE;
+        endcase
+    endfunction
 endpackage
+
