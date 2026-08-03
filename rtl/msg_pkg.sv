@@ -41,7 +41,7 @@ package msg_pkg;
             "A": decode_type = MSG_ADD;
             "E": decode_type = MSG_EXC;
             "D": decode_type = MSG_DEL;
-            default: deocde_type = MSG_NONE;
+            default: decode_type = MSG_NONE;
         endcase
     endfunction
 endpackage
