@@ -1,0 +1,6 @@
+**D-1: FSM now**
+- We could do the parser in 2 different ways: 1. the FSM approach, and 2. the speculative approach.
+- I came up with the FSM (finite-state-machine) approach, which will use 1 shared decoder. Here, a state reg tracks whether the incoming byte fed is a type code or a body byte, a counter tracks position in the message, and some routing sends the byte to the right field. This is an attempt to be cheap in array and allow latency to be ~1 cycle after the final byte.
+- I discovered the speculative approach in an online paper by Ruixuan Zhang [https://doi.org/10.36227/techrxiv.174803766.68744651/v1], where it's almost the opposite approach. Here, there's an instantiated dedicated decoder PER message type which all run in parallel from the very "0th" byte. This decoder checks the byte against its own type and only the matching decoder keeps going. The claim is 1-cycle latency without ANY state-based routing delay as proposed in my approach.
+- Once the pipeline works end-to-end, I'm hopeful to return to this speculative approach instead and implement it into the same AXI stream I've built, then measure both on the ZCU104 board since Zhang's paper doesn't publish any comparative area figures against an FSM baseline. Then through 2 parser microarchitectures, I can quantify the area-latency tradeoff in real time.
+
