@@ -31,16 +31,20 @@ module async_fifo #(
     logic [ADDR_WIDTH:0] w_ptr_gray;
     logic [ADDR_WIDTH:0] r_ptr_gray;
 
-    // sync'd copies of OTHER domain's pointer after 2 flops
-    logic [ADDR_WIDTH:0] r_ptr_gray_sync;
-    logic [ADDR_WIDTH:0] w_ptr_gray_sync;
+    logic [ADDR_WIDTH:0] r_ptr_gray_q1;
+    logic [ADDR_WIDTH:0] r_ptr_gray_q2;
+    logic [ADDR_WIDTH:0] w_ptr_gray_q1;
+    logic [ADDR_WIDTH:0] w_ptr_gray_q2;
 
     logic [ADDR_WIDTH:0] w_ptr_bnry_next;
     logic [ADDR_WIDTH:0] r_ptr_bnry_next;
+
     logic do_write;
     logic do_read;
 
-    // WRITING SIDE OF FIFO //
+    /****************** 
+    WRITING SIDE (w_clk) 
+    ******************/
     
     assign do_write = w_enbl && !full;
     assign w_ptr_bnry_next = do_write ? (w_ptr_bnry+1) : w_ptr_bnry; 
@@ -53,17 +57,60 @@ module async_fifo #(
     end
 
     always_ff @(posedge w_clk) begin
+    // derive from *_next to update on same edge w same logical count
         if (!w_rst_n) begin
             w_ptr_bnry <= '0;
             w_ptr_gray <= '0;
-
         end else begin  
             w_ptr_bnry <= w_ptr_bnry_next;
             w_ptr_gray <= (w_ptr_bnry_next >> 1) ^ w_ptr_bnry_next;
         end
     end
 
-    // READING SIDE OF FIFO //
+    /****************** 
+    Two ff synchronizer (give metastability a full clock to decay)
+    ******************/
+
+    // read ptr entering the WRITE domain
+    // 1. sample signal from foreign clock (metastable)
+    // 2. sample it a full w_clk after (only graycoded)
+    always_ff @(posedge w_clk) begin
+    // sync2 samples 1 clock later than sync1 (basically no change of metastability)
+        if (!w_rst_n) begin
+            r_ptr_gray_q1 <= '0;
+            r_ptr_gray_q2 <= '0;
+        end else begin
+            r_ptr_gray_q1 <= r_ptr_gray;
+            r_ptr_gray_q2 <= r_ptr_gray_q1;
+        end
+    end
+
+    // Check full: W lapped R (on same slot but different lap)
+    // gray = bin ^ (bin >> 1):
+    // so flipping bin's MSB flips gray's MSB, flips next bit down, and every lower gray bit is not touched
+    // so r_ptr_gray_lapped = r_ptr_gray with TOP 2 gray bits inverted
+    logic [ADDR_WIDTH:0] r_ptr_gray_lapped;
+    assign r_ptr_gray_lapped = {~r_ptr_gray_q2[ADDR_WIDTH:ADDR_WIDTH-1],
+                                r_ptr_gray_q2[ADDR_WIDTH-2:0]};
+    assign full = (w_ptr_gray == r_ptr_gray_lapped);
+
+    //
+
+    //
+
+    /****************** 
+    READING SIDE (r_clk) 
+    ******************/ 
+
+    assign do_read = r_enbl && !empty;
+    assign r_ptr_bnry_next = do_read ? (r_ptr_bnry+1) : r_ptr_bnry; 
+
+
+
+
+    // Check empty: same slot same lap
+    assign empty = (r_ptr_gray == w_ptr_gray_q2)
+
 
 
 
