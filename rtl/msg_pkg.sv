@@ -8,7 +8,10 @@ package msg_pkg;
     } msgtype_enum;
 
     typedef struct packed {
+    // declaration order is the bit order for ALL message types (wont match wire format from NASDAQ)
+    // commented is wire format @byte location, actual parser handed down format is the order of the fields
         logic [26:0] rsvd0;         // reserved for C++ padding
+        logic is_buy;               // @19 1='B'=Buy, 0='S'=Sell
         msgtype_enum msg_type;      // @0 add/execute/delete
         
         logic [15:0] rsvd1;         // reserved for C++ padding
@@ -18,12 +21,9 @@ package msg_pkg;
         logic [47:0] timestamp;     // @5 ns since 12am
         
         logic [63:0] order_ref_num; // @11 book key
-
-        logic is_buy;               // @19 1='B'=Buy, 0='S'=Sell
         logic [31:0] shares;        // @20 shares to add ('A') / executed shares ('E')
         logic [63:0] stock;         // @24 8-char ASCII symbol ('A')
         logic [31:0] price;         // @32 raw fixed-point (4 decimals implied)
-
         logic [63:0] match_num;     // @23 match number ('E') (day unique to identify this specific execution)
     } msg_t; // 384b with padding (so every field starts on a 32-bit boundary)
 
@@ -47,6 +47,6 @@ package msg_pkg;
             default: decode_type = MSG_NONE;
         endcase
     endfunction
-    
+
 endpackage
 
