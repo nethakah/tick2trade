@@ -91,10 +91,6 @@ module async_fifo #(
                                 r_ptr_gray_q2[ADDR_WIDTH-2:0]};
     assign full = (w_ptr_gray == r_ptr_gray_lapped);
 
-    //
-
-    //
-
     /****************** 
     READING SIDE (r_clk) (this is pre similar to W side)
     ******************/ 
@@ -106,6 +102,7 @@ module async_fifo #(
     // we infer LUTRAM here which is negligible at 16 depth
     // might need to consider sync if depth grows
     // index w lower bits only bc MSB is a lap counter
+    // this is FWFT (First-Word Fall-Thru) elaborated in /docs/log.md
     assign r_data = mem[r_ptr_bnry[ADDR_WIDTH-1:0]];
 
     always_ff @(posedge r_clk) begin
