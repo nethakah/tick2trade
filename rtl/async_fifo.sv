@@ -67,11 +67,8 @@ module async_fifo #(
         end
     end
 
-    /****************** 
-    Two ff synchronizer (give metastability a full clock to decay)
-    ******************/
-
-    // read ptr entering the WRITE domain
+    // Two ff synchronizer (give metastability a full clock to decay)
+    // READ ptr entering the WRITE domain
     // 1. sample signal from foreign clock (metastable)
     // 2. sample it a full w_clk after (only graycoded)
     always_ff @(posedge w_clk) begin
@@ -99,19 +96,41 @@ module async_fifo #(
     //
 
     /****************** 
-    READING SIDE (r_clk) 
+    READING SIDE (r_clk) (this is pre similar to W side)
     ******************/ 
 
     assign do_read = r_enbl && !empty;
     assign r_ptr_bnry_next = do_read ? (r_ptr_bnry+1) : r_ptr_bnry; 
 
+    // ASYNC read here
+    // we infer LUTRAM here which is negligible at 16 depth
+    // might need to consider sync if depth grows
+    // index w lower bits only bc MSB is a lap counter
+    assign r_data = mem[r_ptr_bnry[ADDR_WIDTH-1:0]];
 
+    always_ff @(posedge r_clk) begin
+        if (!r_rst_n) begin
+            r_ptr_bnry <= '0;
+            r_ptr_gray <= '0;
+        end else begin
+            r_ptr_bnry <= r_ptr_bnry_next;
+            r_ptr_gray <= (r_ptr_bnry_next >> 1) ^ r_ptr_bnry_next;
+        end
+    end
 
+    // Two ff sync
+    // WRITE ptr entering READ domain
+    always_ff @(posedge r_clk) begin
+        if (!r_rst_n) begin
+            w_ptr_gray_q1 <= '0;
+            w_ptr_gray_q2 <= '0;
+        end else begin
+            w_ptr_gray_q1 <= w_ptr_gray;
+            w_ptr_gray_q2 <= w_ptr_gray_q1;
+        end
+    end
 
     // Check empty: same slot same lap
-    assign empty = (r_ptr_gray == w_ptr_gray_q2)
-
-
-
+    assign empty = (r_ptr_gray == w_ptr_gray_q2);
 
 endmodule
