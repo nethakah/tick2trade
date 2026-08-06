@@ -89,7 +89,7 @@
 - Note here the cost of LUTs instead of a BRAM block. But thanks to the board I'm getting access to, this is quite negligible.
 
 ### L-17 FIFO: Shallowness
-- DEPTH=16 right now and in this scope it don't need to grow.
+- DEPTH=16 right now and in this scope it doesn't need to grow.
 - CDC FIFO needs enough depth to cover synchronizer latency (ptr takes 2-3 cycles to become visible across boundary so flags can be stale briefly)
 - Deep FIFOs have to absorb bursts which I just don't need here. Since we're having DMA ingress, backpressure is lossless (L-7), so when FIFO fills then full asserts and DMA pauses and data waits in DDR4 with NOTHING dropped. 
 - Something tangentially related and interesting about deep buffering through, you'd think a real live feed needs it since it doesn't pause, but in HFT having stale messages is catostrophic in its own respect. Hence its actually preferable to drop and resync, and hopefully just have a pipeline fast enough to not need buffering, using gap detection for problems.
