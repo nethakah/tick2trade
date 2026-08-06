@@ -88,25 +88,25 @@
 - This async read gives FWFT (First-Word Fall-Through) so the head is always present on the output when the FIFO is NONEMPTY, so the 2 signals are consistent with no other logic.
 - Note here the cost of LUTs instead of a BRAM block. But thanks to the board I'm getting access to, this is quite negligible.
 
-### L-17 FIFO: Shallowness
+### L-17 FIFO: Shallowness (2026-08-05)
 - DEPTH=16 right now and in this scope it doesn't need to grow.
 - CDC FIFO needs enough depth to cover synchronizer latency (ptr takes 2-3 cycles to become visible across boundary so flags can be stale briefly)
 - Deep FIFOs have to absorb bursts which I just don't need here. Since we're having DMA ingress, backpressure is lossless (L-7), so when FIFO fills then full asserts and DMA pauses and data waits in DDR4 with NOTHING dropped. 
 - Something tangentially related and interesting about deep buffering through, you'd think a real live feed needs it since it doesn't pause, but in HFT having stale messages is catostrophic in its own respect. Hence its actually preferable to drop and resync, and hopefully just have a pipeline fast enough to not need buffering, using gap detection for problems.
 
-### L-18 Skid Buffer for Parser Output
+### L-18 Skid Buffer for Parser Output (2026-08-05)
 - AXI4-Stream needs smth to hold tvalid with stable tdata until consumer asserts tready.
 - The parser cant freeze while bytes keep arriving, so we'll park the message in the skid buffer while the book stalls.
 - The skid buffer has 2 slots and s_tready comes from a registered state (not combinationally from m_tready).
 - This should just cost me 1 cycle of latency, which is usually a net win since latency = cycles × period and breaking the chain raises the achievable clock.
 - W/o the skid buffer here, m_axis_tready from the order book feeds combinationally back into the parser's s_axis_tready — and in a long pipeline those combinational ready-paths chain together across every stage, and that path gets long until it lands on the critical path, and then Fmax drops. A skid buffer registers the ready signal, breaking the chain. 
 
-### L-19 Backpressure Chain Closure
+### L-19 Backpressure Chain Closure (2026-08-05)
 - Wrote `s_axis_tready = !(fsm_tvalid && !fsm_tready)` into the parser.
 - This makes the parser stop consuming bytes when it's holding output which the skid buffer cannot current take in.
 - skid fills --> parser stops consuming --> FIFO fills --> DMA pauses = lossless directly from DDR4 (msgs stay in RAM untouched until we're actually ready to read them so nothing is lost)
 
-### L-20 Padded msg_t to 384 bits
+### L-20 Padded msg_t to 384 bits (2026-08-05)
 - Updated from 325 bits to 384 bits because I want every field to start on a 32-bit boundary.
 - Since we're using Verilator, and any signal wider than 64 bits is an array of uint32_t words. Without this padding, things that span multiple words would need a shift and stitch type of code mechanism, which is just messy.
 - With it padded, every field is 1 whole word or 2, so extraction is at MOST a shift+mask.
