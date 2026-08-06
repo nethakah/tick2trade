@@ -24,22 +24,35 @@ module itch_parser
     logic [5:0] byte_index; // offset of current byte arriving
     logic [5:0] curr_len; // len of msg being consumed
 
-    assign s_axis_tready = 1'b1; 
-    // always 1byte/cycle so we don't need to stall for now (streaming FSM)
+    msg_t fsm_tdata; // FSM's output (feeds skid buffer (slave))
+    logic fsm_tvalid;
+    logic fsm_tready; // skid buffer telling FSM whether it can accept
 
+    // dont accept bytes when we're holding output which the skid buffer cannot take
+    // skid fills --> parser stops consuming --> FIFO fills --> DMA pauses = lossless
+    assign s_axis_tready = !(fsm_tvalid && !fsm_tready); // !(i have output that hasn't been taken) == !(stuck)
+
+    // padding added for testbench C++ extraction from bits easier
+    assign fsm_tdata.rsvd0 = '0;
+    assign fsm_tdata.rsvd1 = '0;
+    assign fsm_tdata.rsvd2 = '0;
+
+    // THE FSM (read bytes and fill-in fields) //
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             state <= READ_TYPE;
             byte_index <= 6'd0;
-            m_axis_tvalid <= 1'b0;
+            if (fsm_tready) begin // only hold high when waiting for acceptance (not dropping after 1 cycle)
+                fsm_tvalid <= 1'b0;
+            end
         end else begin
-            m_axis_tvalid <= 1'b0;
+            fsm_tvalid <= 1'b0;
 
             if (s_axis_tvalid) begin
                 case (state)
                     READ_TYPE: begin
                         if (msg_length(s_axis_tdata) != 6'd0) begin // recognized type
-                            m_axis_tdata.msg_type <= decode_type(s_axis_tdata);
+                            fsm_tdata.msg_type <= decode_type(s_axis_tdata);
                             curr_len <= msg_length(s_axis_tdata);
                             byte_index <= 6'd1;
                             state <= READ_BODY;
@@ -51,60 +64,60 @@ module itch_parser
                         // identical for A/E/D
                         case (byte_index)
                             // Stock locate @1 (2B)
-                            6'd1: m_axis_tdata.stock_locate[15:8] <= s_axis_tdata;
-                            6'd2: m_axis_tdata.stock_locate[7:0] <= s_axis_tdata;
+                            6'd1: fsm_tdata.stock_locate[15:8] <= s_axis_tdata;
+                            6'd2: fsm_tdata.stock_locate[7:0] <= s_axis_tdata;
 
                             // Tracking num @3 (2B)
                             6'd3: ;
                             6'd4: ;
                             
                             // Timestamp @5 (6B)
-                            6'd5: m_axis_tdata.timestamp[47:40] <= s_axis_tdata;
-                            6'd6: m_axis_tdata.timestamp[39:32] <= s_axis_tdata;
-                            6'd7: m_axis_tdata.timestamp[31:24] <= s_axis_tdata;
-                            6'd8: m_axis_tdata.timestamp[23:16] <= s_axis_tdata;
-                            6'd9: m_axis_tdata.timestamp[15:8] <= s_axis_tdata;
-                            6'd10: m_axis_tdata.timestamp[7:0] <= s_axis_tdata;
+                            6'd5: fsm_tdata.timestamp[47:40] <= s_axis_tdata;
+                            6'd6: fsm_tdata.timestamp[39:32] <= s_axis_tdata;
+                            6'd7: fsm_tdata.timestamp[31:24] <= s_axis_tdata;
+                            6'd8: fsm_tdata.timestamp[23:16] <= s_axis_tdata;
+                            6'd9: fsm_tdata.timestamp[15:8] <= s_axis_tdata;
+                            6'd10: fsm_tdata.timestamp[7:0] <= s_axis_tdata;
 
                             // Order ref num @11 (8B)
-                            6'd11: m_axis_tdata.order_ref_num[63:56] <= s_axis_tdata;
-                            6'd12: m_axis_tdata.order_ref_num[55:48] <= s_axis_tdata;
-                            6'd13: m_axis_tdata.order_ref_num[47:40] <= s_axis_tdata;
-                            6'd14: m_axis_tdata.order_ref_num[39:32] <= s_axis_tdata;
-                            6'd15: m_axis_tdata.order_ref_num[31:24] <= s_axis_tdata;
-                            6'd16: m_axis_tdata.order_ref_num[23:16] <= s_axis_tdata;
-                            6'd17: m_axis_tdata.order_ref_num[15:8] <= s_axis_tdata;
-                            6'd18: m_axis_tdata.order_ref_num[7:0] <= s_axis_tdata;
+                            6'd11: fsm_tdata.order_ref_num[63:56] <= s_axis_tdata;
+                            6'd12: fsm_tdata.order_ref_num[55:48] <= s_axis_tdata;
+                            6'd13: fsm_tdata.order_ref_num[47:40] <= s_axis_tdata;
+                            6'd14: fsm_tdata.order_ref_num[39:32] <= s_axis_tdata;
+                            6'd15: fsm_tdata.order_ref_num[31:24] <= s_axis_tdata;
+                            6'd16: fsm_tdata.order_ref_num[23:16] <= s_axis_tdata;
+                            6'd17: fsm_tdata.order_ref_num[15:8] <= s_axis_tdata;
+                            6'd18: fsm_tdata.order_ref_num[7:0] <= s_axis_tdata;
 
                             default: ;
                         endcase
 
-                        case (m_axis_tdata.msg_type)
+                        case (fsm_tdata.msg_type)
                             MSG_ADD: begin
                                 case (byte_index)
-                                    6'd19: m_axis_tdata.is_buy <= (s_axis_tdata == "B");
+                                    6'd19: fsm_tdata.is_buy <= (s_axis_tdata == "B");
 
                                     // Shares @20 (4B)
-                                    6'd20: m_axis_tdata.shares[31:24] <= s_axis_tdata;
-                                    6'd21: m_axis_tdata.shares[23:16] <= s_axis_tdata;
-                                    6'd22: m_axis_tdata.shares[15:8] <= s_axis_tdata;
-                                    6'd23: m_axis_tdata.shares[7:0] <= s_axis_tdata;
+                                    6'd20: fsm_tdata.shares[31:24] <= s_axis_tdata;
+                                    6'd21: fsm_tdata.shares[23:16] <= s_axis_tdata;
+                                    6'd22: fsm_tdata.shares[15:8] <= s_axis_tdata;
+                                    6'd23: fsm_tdata.shares[7:0] <= s_axis_tdata;
 
                                     // Stock @24 (8B)
-                                    6'd24: m_axis_tdata.stock[63:56] <= s_axis_tdata;
-                                    6'd25: m_axis_tdata.stock[55:48] <= s_axis_tdata;
-                                    6'd26: m_axis_tdata.stock[47:40] <= s_axis_tdata;
-                                    6'd27: m_axis_tdata.stock[39:32] <= s_axis_tdata;
-                                    6'd28: m_axis_tdata.stock[31:24] <= s_axis_tdata;
-                                    6'd29: m_axis_tdata.stock[23:16] <= s_axis_tdata;
-                                    6'd30: m_axis_tdata.stock[15:8] <= s_axis_tdata;
-                                    6'd31: m_axis_tdata.stock[7:0] <= s_axis_tdata;
+                                    6'd24: fsm_tdata.stock[63:56] <= s_axis_tdata;
+                                    6'd25: fsm_tdata.stock[55:48] <= s_axis_tdata;
+                                    6'd26: fsm_tdata.stock[47:40] <= s_axis_tdata;
+                                    6'd27: fsm_tdata.stock[39:32] <= s_axis_tdata;
+                                    6'd28: fsm_tdata.stock[31:24] <= s_axis_tdata;
+                                    6'd29: fsm_tdata.stock[23:16] <= s_axis_tdata;
+                                    6'd30: fsm_tdata.stock[15:8] <= s_axis_tdata;
+                                    6'd31: fsm_tdata.stock[7:0] <= s_axis_tdata;
 
                                     // Price @32 (4B) (KEY NOTE: 4 IMPLIED DECIMALS (fixed pt))
-                                    6'd32: m_axis_tdata.price[31:24] <= s_axis_tdata;
-                                    6'd33: m_axis_tdata.price[23:16] <= s_axis_tdata;
-                                    6'd34: m_axis_tdata.price[15:8] <= s_axis_tdata;
-                                    6'd35: m_axis_tdata.price[7:0] <= s_axis_tdata;
+                                    6'd32: fsm_tdata.price[31:24] <= s_axis_tdata;
+                                    6'd33: fsm_tdata.price[23:16] <= s_axis_tdata;
+                                    6'd34: fsm_tdata.price[15:8] <= s_axis_tdata;
+                                    6'd35: fsm_tdata.price[7:0] <= s_axis_tdata;
 
                                     default: ;
                                 endcase
@@ -112,20 +125,20 @@ module itch_parser
 
                             MSG_EXC: begin
                                 case (byte_index)
-                                    6'd19: m_axis_tdata.shares[31:24] <= s_axis_tdata;
-                                    6'd20: m_axis_tdata.shares[23:16] <= s_axis_tdata;
-                                    6'd21: m_axis_tdata.shares[15:8] <= s_axis_tdata;
-                                    6'd22: m_axis_tdata.shares[7:0] <= s_axis_tdata;
+                                    6'd19: fsm_tdata.shares[31:24] <= s_axis_tdata;
+                                    6'd20: fsm_tdata.shares[23:16] <= s_axis_tdata;
+                                    6'd21: fsm_tdata.shares[15:8] <= s_axis_tdata;
+                                    6'd22: fsm_tdata.shares[7:0] <= s_axis_tdata;
 
                                     // Match num @23 (8B) (the unique day execution ID)
-                                    6'd23: m_axis_tdata.match_num[63:56] <= s_axis_tdata;
-                                    6'd24: m_axis_tdata.match_num[55:48] <= s_axis_tdata;
-                                    6'd25: m_axis_tdata.match_num[47:40] <= s_axis_tdata;
-                                    6'd26: m_axis_tdata.match_num[39:32] <= s_axis_tdata;
-                                    6'd27: m_axis_tdata.match_num[31:24] <= s_axis_tdata;
-                                    6'd28: m_axis_tdata.match_num[23:16] <= s_axis_tdata;
-                                    6'd29: m_axis_tdata.match_num[15:8] <= s_axis_tdata;
-                                    6'd30: m_axis_tdata.match_num[7:0] <= s_axis_tdata;
+                                    6'd23: fsm_tdata.match_num[63:56] <= s_axis_tdata;
+                                    6'd24: fsm_tdata.match_num[55:48] <= s_axis_tdata;
+                                    6'd25: fsm_tdata.match_num[47:40] <= s_axis_tdata;
+                                    6'd26: fsm_tdata.match_num[39:32] <= s_axis_tdata;
+                                    6'd27: fsm_tdata.match_num[31:24] <= s_axis_tdata;
+                                    6'd28: fsm_tdata.match_num[23:16] <= s_axis_tdata;
+                                    6'd29: fsm_tdata.match_num[15:8] <= s_axis_tdata;
+                                    6'd30: fsm_tdata.match_num[7:0] <= s_axis_tdata;
 
                                     default: ;
                                 endcase
@@ -138,7 +151,7 @@ module itch_parser
                         
                         // curr_len = total bytes
                         if (byte_index == curr_len - 6'd1) begin
-                            m_axis_tvalid <= 1'b1;
+                            fsm_tvalid <= 1'b1;
                             state <= READ_TYPE;
                         end else begin
                             byte_index <= byte_index + 6'd1;
@@ -148,6 +161,21 @@ module itch_parser
             end
         end
     end
+
+    skid_buffer #(
+        .DATA_WIDTH ($bits(msg_t))
+    ) sb (
+        .clk (clk),
+        .rst_n (rst_n),
+
+        .s_tdata (fsm_tdata),
+        .s_tvalid (fsm_tvalid),
+        .s_tready (fsm_tready),
+
+        .m_tdata (m_axis_tdata),
+        .m_tvalid (m_axis_tvalid),
+        .m_tready (m_axis_tready)
+    );
 
 
 endmodule

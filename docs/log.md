@@ -93,3 +93,6 @@
 - CDC FIFO needs enough depth to cover synchronizer latency (ptr takes 2-3 cycles to become visible across boundary so flags can be stale briefly)
 - Deep FIFOs have to absorb bursts which I just don't need here. Since we're having DMA ingress, backpressure is lossless (L-7), so when FIFO fills then full asserts and DMA pauses and data waits in DDR4 with NOTHING dropped. 
 - Something tangentially related and interesting about deep buffering through, you'd think a real live feed needs it since it doesn't pause, but in HFT having stale messages is catostrophic in its own respect. Hence its actually preferable to drop and resync, and hopefully just have a pipeline fast enough to not need buffering, using gap detection for problems.
+
+### L-? Skid Buffer
+- Without a skid buffer, m_axis_tready from the order book feeds combinationally back into the parser's s_axis_tready — and in a long pipeline those combinational ready-paths chain together across every stage -> that path gets long, it lands on your critical path, and your Fmax drops. A skid buffer registers the ready signal, breaking the chain. Each stage's ready depends only on its immediate neighbor.

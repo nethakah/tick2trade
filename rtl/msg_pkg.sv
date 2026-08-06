@@ -8,21 +8,24 @@ package msg_pkg;
     } msgtype_enum;
 
     typedef struct packed {
-        // common header (@N byte offset)
+        logic [26:0] rsvd0;         // reserved for C++ padding
         msgtype_enum msg_type;      // @0 add/execute/delete
+        
+        logic [15:0] rsvd1;         // reserved for C++ padding
         logic [15:0] stock_locate;  // @1 book array index 
+        
+        logic [15:0] rsvd2;     // reserved for C++ padding
         logic [47:0] timestamp;     // @5 ns since 12am
+        
         logic [63:0] order_ref_num; // @11 book key
 
-        // add order body
         logic is_buy;               // @19 1='B'=Buy, 0='S'=Sell
         logic [31:0] shares;        // @20 shares to add ('A') / executed shares ('E')
         logic [63:0] stock;         // @24 8-char ASCII symbol ('A')
         logic [31:0] price;         // @32 raw fixed-point (4 decimals implied)
-        
-        // misc (for later when we add other msg types)
+
         logic [63:0] match_num;     // @23 match number ('E') (day unique to identify this specific execution)
-    } msg_t;
+    } msg_t; // 384b with padding (so every field starts on a 32-bit boundary)
 
     function automatic logic [5:0] msg_length( // bytes
     input logic [7:0] type_byte); 
@@ -44,5 +47,6 @@ package msg_pkg;
             default: decode_type = MSG_NONE;
         endcase
     endfunction
+    
 endpackage
 
