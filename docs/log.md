@@ -38,7 +38,7 @@
 ### L-7 DMA Ingress (2026-08-03)
 - The current scope feeds the pipeline from DDR (the 2GB of DRAM hardened next to the chip attached to the PS side) through a PS to PL (from processor side to fabric side) AXI-DMA engine. In other words, software running on the A53s will load a file of ITCH messages into memory, then the DMA engine streams that memory out on its own as an AXI4-Stream with no CPU involvement per byte.
 - Thus, the path is: ITCH file -> software -> DDR4 -> AXI-DMA -> AXI-Stream -> my parser -> my order book -> signal.
-- Key thing to note is that backpressure is lossless here because if the parser deasserts `tready`, the DMA pauses so data sits in DRAM with nothing dropped. We don't need any drop-and-recover or gap counters! It's simple and correct as is.
+- Key thing to note is that backpressure is lossless here because if the parser deasserts `tready`, the DMA pauses so data sits in DRAM with nothing dropped. 
 
 ### L-8: Packaging for AXI4-Stream Data (2026-08-03)
 - The parser's output payload is a packed struct on `tdata` instead of separate ports, even though multiple fields works fine, since an IP that is actively expecting a SINGLE payload bus makes things a bit unideal.
@@ -59,7 +59,7 @@
 
 ### L-12 Sync Active LO Reset (2026-08-03)
 - Registers reset syncrhonously on clock edge, using the active-low version, `rst_n`. It's recommended on UltraScale devices for arhitectural purposes: the flip-flop primitives have a dedicated sync reset input, so using a sync reset costs no extra logic while a typically async reset would have to route differently.
-- And a second choice is part of this, we only reset signals that must be deterministic. Namely: FSM state, byte counter, output valid. I've opted NOT to reset the ~325 payload flip-flops, leaving it more to a "who cares until they're written" philosophy, since resetting them costs area and timing for absolutely no purpose.
+- And a second choice is part of this, we only reset signals that must be deterministic. Namely: FSM state, byte counter, output valid. I've opted NOT to reset the ~325 (now ~384 with word alignment by 2026-08-05) payload flip-flops, leaving it more to a "who cares until they're written" philosophy, since resetting them costs area and timing for absolutely no purpose.
 - In the case of ASIC though, the ASIC libraries would prefer async assert with sync deassert since reset must take effect before the clock is running. I currently have sights to test my parser in my research lab via Cadence flows (to get a PPA measurement (Power, Performance, Area)), where Genus might honestly object to this design choice. 
 
 ### L-13 FIFO: Async (2026-08-04)
@@ -79,7 +79,7 @@
 
 ### L-15 FIFO: Not Converting Gray to Binary (2026-08-05)
 - One way we could understand the `full` flag is by converting the scrambled gray back to binary (so binary[i] = XOR of all gray bits at i and above i).
-- Instead, since gray = binary ^ (binary >> 1), we can gather that the top bit is flipped directly and the bit below it as well, while every lower bit is untouched. So we just need to worry about the top 2 bits and compute an equality with it.
+- Instead, since `gray = binary ^ (binary >> 1)`, we can gather that the top bit is flipped directly and the bit below it as well, while every lower bit is untouched. So we just need to worry about the top 2 bits and compute an equality with it.
 - I picked this for SPEED. It's more elegant to write it out and use a conversion function, but an XOR chain like that that grows with ptr width is taxing when we are measuring in nanoseconds of latency.
 
 ### L-16 FIFO: Async Read on r_data for FWFT (2026-08-05)
@@ -94,5 +94,20 @@
 - Deep FIFOs have to absorb bursts which I just don't need here. Since we're having DMA ingress, backpressure is lossless (L-7), so when FIFO fills then full asserts and DMA pauses and data waits in DDR4 with NOTHING dropped. 
 - Something tangentially related and interesting about deep buffering through, you'd think a real live feed needs it since it doesn't pause, but in HFT having stale messages is catostrophic in its own respect. Hence its actually preferable to drop and resync, and hopefully just have a pipeline fast enough to not need buffering, using gap detection for problems.
 
-### L-? Skid Buffer
-- Without a skid buffer, m_axis_tready from the order book feeds combinationally back into the parser's s_axis_tready — and in a long pipeline those combinational ready-paths chain together across every stage -> that path gets long, it lands on your critical path, and your Fmax drops. A skid buffer registers the ready signal, breaking the chain. Each stage's ready depends only on its immediate neighbor.
+### L-18 Skid Buffer for Parser Output
+- AXI4-Stream needs smth to hold tvalid with stable tdata until consumer asserts tready.
+- The parser cant freeze while bytes keep arriving, so we'll park the message in the skid buffer while the book stalls.
+- The skid buffer has 2 slots and s_tready comes from a registered state (not combinationally from m_tready).
+- This should just cost me 1 cycle of latency, which is usually a net win since latency = cycles × period and breaking the chain raises the achievable clock.
+- W/o the skid buffer here, m_axis_tready from the order book feeds combinationally back into the parser's s_axis_tready — and in a long pipeline those combinational ready-paths chain together across every stage, and that path gets long until it lands on the critical path, and then Fmax drops. A skid buffer registers the ready signal, breaking the chain. 
+
+### L-19 Backpressure Chain Closure
+- Wrote `s_axis_tready = !(fsm_tvalid && !fsm_tready)` into the parser.
+- This makes the parser stop consuming bytes when it's holding output which the skid buffer cannot current take in.
+- skid fills --> parser stops consuming --> FIFO fills --> DMA pauses = lossless directly from DDR4 (msgs stay in RAM untouched until we're actually ready to read them so nothing is lost)
+
+### L-20 Padded msg_t to 384 bits
+- Updated from 325 bits to 384 bits because I want every field to start on a 32-bit boundary.
+- Since we're using Verilator, and any signal wider than 64 bits is an array of uint32_t words. Without this padding, things that span multiple words would need a shift and stitch type of code mechanism, which is just messy.
+- With it padded, every field is 1 whole word or 2, so extraction is at MOST a shift+mask.
+- This does cost me ~59 flip flops with no latency impact, so that's fine given the hardware I have access to here, and its standard for structs crossing hardware/software boundary (like how C compilers pad structs).
