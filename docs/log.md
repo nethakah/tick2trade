@@ -122,3 +122,7 @@
 ### log-23: Verified the generator before the RTL (2026-08-06)
 - I took the message builder for the TB, hex-dumped it, and then checked byte-by-byte against ITCH spec tables before using it on the parser.
 - I thought this was a good idea that might come in handy again, since if we are measuring using this "generator," it's crucial we calibrate it first or it throws everything off. Hence the generator will not cause any bugs in it of itself!
+
+### log-24: Randomized parser messages verified! (2026-08-10)
+- 100,000 messages passed with random fiedl values, streamed b2b, and checked in every field against pre-determined expectations at generation time of those messages.
+- It's a regression, not a stress test, since the seed is fixed and printed on failure so we can reproduce them, and every msg is checked rather than counted.
