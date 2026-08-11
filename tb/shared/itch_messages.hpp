@@ -53,13 +53,13 @@ static inline uint64_t ticker_to_u64(const char *symbol)
     std::memset(padded, ' ', 8);
 
     size_t len = std::strlen(symbol);
-    if (len > 8) {
+    if (len > 8){
         len = 8;
     }
     std::memcpy(padded, symbol, len);
 
     uint64_t res = 0;
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++){
         res = (res<<8) | padded[i];
     }
 
@@ -84,7 +84,7 @@ static inline void build_common_header(
 
 // ORDER ADD
 static constexpr size_t ORDER_ADD_LEN = 36;
-struct OrderAdd {
+struct OrderAdd{
     uint16_t stock_locate; // @1 book array index
     uint16_t tracking_num; // @3 internal for Nasdaq (parser ignores this)
     uint64_t timestamp; // @5
@@ -116,7 +116,7 @@ static inline void build_order_add(uint8_t *dest, const OrderAdd &msg)
 
 // ORDER EXECUTED
 static constexpr size_t ORDER_EXECUTED_LEN = 31;
-struct OrderExecuted {
+struct OrderExecuted{
     uint16_t stock_locate; //@1
     uint16_t tracking_num; //@3
     uint64_t timestamp; //@5
@@ -137,8 +137,7 @@ static inline void build_order_executed(uint8_t *dest, const OrderExecuted &msg)
 
 // ORDER DELETE
 static constexpr size_t ORDER_DELETE_LEN = 19;
-struct OrderDelete
-{
+struct OrderDelete{
     uint16_t stock_locate; //@1
     uint16_t tracking_num; //@3
     uint64_t timestamp; //@5

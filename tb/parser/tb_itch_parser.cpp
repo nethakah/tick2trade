@@ -1,4 +1,5 @@
 /*
+rm -rf obj_dir
 verilator --cc --exe --build -j 0 --top-module itch_parser \
     rtl/msg_pkg.sv rtl/skid_buffer.sv rtl/itch_parser.sv \
     tb/parser/tb_itch_parser.cpp
@@ -9,6 +10,7 @@ verilator --cc --exe --build -j 0 --top-module itch_parser \
 #include <verilated.h> // runtime thing for Verilator
 #include <cstdio>
 #include <cstdint>
+#include <cstdlib>
 
 #include "../shared/itch_messages.hpp"
 
@@ -30,7 +32,7 @@ static void reset(Vitch_parser* dut)
     dut->s_axis_tdata = 0;
     dut->m_axis_tready = 1;
 
-    for (int i = 0; i < RESET_CYCLES; i++) {
+    for (size_t i = 0; i < RESET_CYCLES; i++){
         tick(dut);
     }
 
@@ -48,15 +50,15 @@ static void push_byte(Vitch_parser* dut, uint8_t b)
 
 static void send_msg(Vitch_parser* dut, const uint8_t* msg, size_t len)
 {
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++){
         push_byte(dut, msg[i]);
     }
 }
 
 static int wait_for_msg(Vitch_parser *dut, int max_cycles = 100)
 {
-    for (int i = 0; i < max_cycles; i++) {
-        if (dut->m_axis_tvalid) {
+    for (size_t i = 0; i < max_cycles; i++){
+        if (dut->m_axis_tvalid){
             return i;
         }
         dut->s_axis_tvalid = 0;
@@ -143,7 +145,7 @@ static int failures = 0;
 
 static void check(uint64_t actual, uint64_t expected, const char* name)
 {
-    if (actual != expected) {
+    if (actual != expected){
         std::printf("FAIL %-14s got: 0x%llx, expected: 0x%llx\n",
                     name, (unsigned long long)actual, (unsigned long long)expected);
         failures++;
@@ -170,7 +172,7 @@ static void test_add_order(Vitch_parser *dut)
     send_msg(dut, msg, ORDER_ADD_LEN);
 
     int waited = wait_for_msg(dut);
-    if (waited < 0) {
+    if (waited < 0){
         std::printf("FAILED (no message emitted within timeout period)");
         failures++;
         return;
@@ -204,7 +206,7 @@ static void test_order_executed(Vitch_parser *dut)
     send_msg(dut, msg, ORDER_EXECUTED_LEN);
 
     int waited = wait_for_msg(dut);
-    if (waited < 0) {
+    if (waited < 0){
         std::printf("FAILED (no message emitted within timeout period)");
         failures++;
         return;
@@ -234,7 +236,7 @@ static void test_order_delete(Vitch_parser *dut)
     send_msg(dut, msg, ORDER_DELETE_LEN);
 
     int waited = wait_for_msg(dut);
-    if (waited < 0) {
+    if (waited < 0){
         std::printf("FAILED (no message emitted within timeout period)");
         failures++;
         return;
@@ -329,6 +331,154 @@ static void test_back2back(Vitch_parser *dut)
     check(captured[2].order_ref, del.order_ref_num, "msg2order_ref");
 }
 
+static uint64_t rand_u64(void)
+{
+    return ((uint64_t)rand()<<33) ^ ((uint64_t)rand()<<16) ^ ((uint64_t)rand());
+}
+static uint32_t rand_u32(void)
+{
+    return ((uint32_t)rand()<<16) ^ ((uint32_t)rand());
+}
+static uint16_t rand_u16(void)
+{
+    return ((uint16_t)rand());
+}
+
+struct Expected{
+    uint8_t msg_type;
+    uint16_t stock_locate;
+    uint64_t timestamp;
+    uint64_t order_ref_num;
+    bool is_buy;
+    uint32_t shares;
+    uint64_t stock;
+    uint32_t price;
+    uint64_t match_num;
+};
+static void test_random_stream(Vitch_parser *dut, int num_msgs, unsigned int seed)
+{
+    std::printf("TESTING: Randomized stream (%d messages, seed %u)\n", num_msgs, seed);
+    reset(dut);
+    srand(seed); // for reproducibility
+
+    static const char *tickers[] = {"AAPL", "MSFT", "NVDA", "AMZN", "GOOGL"};
+
+    uint8_t *stream = new uint8_t[num_msgs*ORDER_ADD_LEN];
+    Expected *expected = new Expected[num_msgs];
+    size_t stream_len = 0;
+
+    for (int i = 0; i < num_msgs; i++){
+        int which = rand() % 3; 
+        // 0=add, 1=exc; 2=del
+
+        uint16_t locate = rand_u16();
+        uint64_t timestamp = rand_u64() & 0xFFFFFFFFFFFFULL;
+        uint64_t order_ref = rand_u64();
+
+        expected[i].stock_locate = locate;
+        expected[i].timestamp = timestamp;
+        expected[i].order_ref_num = order_ref;
+
+        if (which==0){
+            OrderAdd s;
+            s.stock_locate = locate;
+            s.tracking_num = rand_u16();
+            s.timestamp = timestamp;
+            s.order_ref_num = order_ref;
+            s.is_buy = (rand() % 2) != 0;
+            s.shares = rand_u32();
+            s.stock = tickers[rand() % 5];
+            s.price = rand_u32();
+
+            build_order_add(&stream[stream_len], s);
+            stream_len += ORDER_ADD_LEN;
+
+            expected[i].msg_type = MSG_ADD;
+            expected[i].is_buy = s.is_buy;
+            expected[i].shares = s.shares;
+            expected[i].stock = ticker_to_u64(s.stock);
+            expected[i].price = s.price;
+        }
+        else if (which==1){
+            OrderExecuted s;
+            s.stock_locate = locate;
+            s.tracking_num = rand_u16();
+            s.timestamp = timestamp;
+            s.order_ref_num = order_ref;
+            s.shares = rand_u32();
+            s.match_num = rand_u64();
+
+            build_order_executed(&stream[stream_len], s);
+            stream_len += ORDER_EXECUTED_LEN;
+
+            expected[i].msg_type = MSG_EXC;
+            expected[i].shares = s.shares;
+            expected[i].match_num = s.match_num;
+        }
+        else{ // which==2
+            OrderDelete s;
+            s.stock_locate = locate;
+            s.tracking_num = rand_u16();
+            s.timestamp = timestamp;
+            s.order_ref_num = order_ref;
+
+            build_order_delete(&stream[stream_len], s);
+            stream_len += ORDER_DELETE_LEN;
+
+            expected[i].msg_type = MSG_DEL;  
+        }
+    }
+
+    int num_seen = 0;
+    int local_failures = failures;
+    for (size_t i = 0; i < stream_len; i++){
+        push_byte(dut, stream[i]);
+        if (dut->m_axis_tvalid && num_seen < num_msgs){
+            const Expected &e = expected[num_seen];
+            if (get_msg_type(dut) != e.msg_type ||
+                get_locate(dut) != e.stock_locate ||
+                get_timestamp(dut) != e.timestamp ||
+                get_order_ref(dut) != e.order_ref_num) {
+                std::printf("  FAIL msg %d (type %u)\n", num_seen, e.msg_type);
+                check(get_msg_type(dut), e.msg_type, "type");
+                check(get_locate(dut), e.stock_locate, "locate");
+                check(get_timestamp(dut), e.timestamp, "timestamp");
+                check(get_order_ref(dut), e.order_ref_num, "order_ref");
+            }
+            if (e.msg_type == MSG_ADD) {
+                check(get_is_buy(dut), e.is_buy, "is_buy");
+                check(get_shares(dut), e.shares, "shares");
+                check(get_stock(dut), e.stock, "stock");
+                check(get_price(dut), e.price, "price");
+            } else if (e.msg_type == MSG_EXC) {
+                check(get_shares(dut), e.shares, "shares");
+                check(get_match_num(dut), e.match_num, "match_num");
+            }
+            num_seen++;
+        }
+    }
+
+    for (int i = 0; i<5 && num_seen<num_msgs; i++){
+        dut->s_axis_tvalid = 0;
+        tick(dut);
+        if (dut->m_axis_tvalid) {
+            const Expected &e = expected[num_seen];
+            check(get_msg_type(dut), e.msg_type, "final type");
+            check(get_order_ref(dut), e.order_ref_num, "final order_ref");
+            num_seen++;
+        }
+    }
+
+    check(num_seen, num_msgs, "messages received");
+
+    if (failures != local_failures){
+        std::printf("; re-run with seed %u to reproduce this result.\n", seed);
+    }
+
+    delete[] stream;
+    delete[] expected;
+
+}
 
 int main(int argc, char** argv) // (argument count (words typed), argument vector (words themselves))
 {
@@ -339,6 +489,8 @@ int main(int argc, char** argv) // (argument count (words typed), argument vecto
     test_order_executed(dut);
     test_order_delete(dut);
     test_back2back(dut);
+
+    test_random_stream(dut, 100000, 12345);
 
     std::printf("\n%s (Failures: %d)\n",
                 failures ? "FAILED" : "PASSED", failures);
