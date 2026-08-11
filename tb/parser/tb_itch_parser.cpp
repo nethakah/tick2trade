@@ -10,7 +10,7 @@ verilator --cc --exe --build -j 0 --top-module itch_parser \
 #include <cstdio>
 #include <cstdint>
 
-#include "../shared/itch_messages.h"
+#include "../shared/itch_messages.hpp"
 
 static constexpr int RESET_CYCLES = 5; // constexpr is C++ for eval this at compile time, not run time
 static constexpr int TDATA_WORDS = 12; // 384b = 12 words * 32 bits
@@ -140,58 +140,209 @@ static constexpr uint8_t MSG_EXC  = 2;
 static constexpr uint8_t MSG_DEL  = 3;
 
 static int failures = 0;
+
 static void check(uint64_t actual, uint64_t expected, const char* name)
 {
     if (actual != expected) {
-        std::printf("FAIL %-14s got: 0x%11x, expected: 0x%11x\n",
+        std::printf("FAIL %-14s got: 0x%llx, expected: 0x%llx\n",
                     name, (unsigned long long)actual, (unsigned long long)expected);
         failures++;
     }
 }
 
-int main(int argc, char** argv)
+static void test_add_order(Vitch_parser *dut)
+{
+    std::printf("TESTING: Add Order (A)\n");
+    reset(dut);
+
+    OrderAdd add;
+    add.stock_locate  = 1;
+    add.tracking_num  = 1;
+    add.timestamp = 1000;
+    add.order_ref_num = 100;
+    add.is_buy = true;
+    add.shares = 500;
+    add.stock = "AAPL";
+    add.price = 1500000; // $150.0000
+
+    uint8_t msg[ORDER_ADD_LEN];
+    build_order_add(msg, add);
+    send_msg(dut, msg, ORDER_ADD_LEN);
+
+    int waited = wait_for_msg(dut);
+    if (waited < 0) {
+        std::printf("FAILED (no message emitted within timeout period)");
+        failures++;
+        return;
+    }
+
+    check(get_msg_type(dut), MSG_ADD, "msg_type");
+    check(get_is_buy(dut), add.is_buy, "is_buy");
+    check(get_locate(dut), add.stock_locate, "stock_locate");
+    check(get_timestamp(dut), add.timestamp, "timestamp");
+    check(get_order_ref(dut), add.order_ref_num, "order_ref_num");
+    check(get_shares(dut), add.shares, "shares");
+    check(get_stock(dut), ticker_to_u64(add.stock), "stock");
+    check(get_price(dut), add.price, "price");
+}
+
+static void test_order_executed(Vitch_parser *dut)
+{
+    std::printf("TESTING: Order Executed (E)\n");
+    reset(dut);
+
+    OrderExecuted exc;
+    exc.stock_locate = 1;
+    exc.tracking_num  = 2;
+    exc.timestamp = 2000;
+    exc.order_ref_num = 100;
+    exc.shares = 200;
+    exc.match_num = 55;
+
+    uint8_t msg[ORDER_EXECUTED_LEN];
+    build_order_executed(msg, exc);
+    send_msg(dut, msg, ORDER_EXECUTED_LEN);
+
+    int waited = wait_for_msg(dut);
+    if (waited < 0) {
+        std::printf("FAILED (no message emitted within timeout period)");
+        failures++;
+        return;
+    }
+
+    check(get_msg_type(dut), MSG_EXC, "msg_type");
+    check(get_locate(dut), exc.stock_locate, "stock_locate");
+    check(get_timestamp(dut), exc.timestamp, "timestamp");
+    check(get_order_ref(dut), exc.order_ref_num, "order_ref_num");
+    check(get_shares(dut), exc.shares, "shares");
+    check(get_match_num(dut), exc.match_num, "match_num");
+}
+
+static void test_order_delete(Vitch_parser *dut)
+{
+    std::printf("TESTING: Order Delete (D)\n");
+    reset(dut);
+
+    OrderDelete del;
+    del.stock_locate = 1;
+    del.tracking_num  = 3;
+    del.timestamp = 3000;
+    del.order_ref_num = 100;
+
+    uint8_t msg[ORDER_DELETE_LEN];
+    build_order_delete(msg, del);
+    send_msg(dut, msg, ORDER_DELETE_LEN);
+
+    int waited = wait_for_msg(dut);
+    if (waited < 0) {
+        std::printf("FAILED (no message emitted within timeout period)");
+        failures++;
+        return;
+    }
+
+    check(get_msg_type(dut), MSG_DEL, "msg_type");
+    check(get_locate(dut), del.stock_locate, "stock_locate");
+    check(get_timestamp(dut), del.timestamp, "timestamp");
+    check(get_order_ref(dut), del.order_ref_num, "order_ref_num");
+}
+
+static void test_back2back(Vitch_parser *dut)
+{
+    std::printf("TESTING: Back to back stream (A -> E -> D)\n");
+    reset(dut);
+
+    OrderAdd add;
+    add.stock_locate = 1;
+    add.tracking_num = 1;
+    add.timestamp = 1000;
+    add.order_ref_num = 100;
+    add.is_buy = false;
+    add.shares = 500;
+    add.stock = "MSFT";
+    add.price = 1500000;
+
+    OrderExecuted exc;
+    exc.stock_locate = 1;
+    exc.tracking_num = 2;
+    exc.timestamp = 2000;
+    exc.order_ref_num = 100;
+    exc.shares = 200;
+    exc.match_num = 55;
+
+    OrderDelete del;
+    del.stock_locate = 1;
+    del.tracking_num = 3;
+    del.timestamp = 3000;
+    del.order_ref_num = 100;
+
+    uint8_t stream[ORDER_ADD_LEN+ORDER_EXECUTED_LEN+ORDER_DELETE_LEN];
+    build_order_add(&stream[0], add);
+    build_order_executed(&stream[ORDER_ADD_LEN], exc);
+    build_order_delete(&stream[ORDER_ADD_LEN+ORDER_EXECUTED_LEN], del);
+
+    // To remember what came out
+    struct CapturedMsg{
+        uint8_t msg_type;
+        uint64_t order_ref;
+        uint32_t shares;
+    };
+    CapturedMsg captured[3]; //1 slot per msg we expect
+    int num_captured = 0;
+
+    for (size_t i = 0; i < sizeof(stream); i++){
+        push_byte(dut, stream[i]);
+
+        if (dut->m_axis_tvalid && num_captured<3){
+            captured[num_captured].msg_type = get_msg_type(dut);
+            captured[num_captured].order_ref = get_order_ref(dut);
+            captured[num_captured].shares = get_shares(dut);
+            num_captured++;
+        }
+    }
+
+    // when final byte goes in, 3rd msg hasnt come out yet so we need 1 more cycle for the skid buffer
+    // this ticks a few times w no input
+    for (int i = 0; i < 5 && num_captured<3; i++){
+        dut->s_axis_tvalid = 0; // no bytes left
+        tick(dut);
+
+        if (dut->m_axis_tvalid && num_captured<3){
+            captured[num_captured].msg_type = get_msg_type(dut);
+            captured[num_captured].order_ref = get_order_ref(dut);
+            captured[num_captured].shares = get_shares(dut);
+            num_captured++;
+        }
+    }
+
+    check(num_captured, 3, "message count");
+    if (num_captured != 3) return;
+
+    check(captured[0].msg_type, MSG_ADD, "msg0type");
+    check(captured[0].order_ref, add.order_ref_num, "msg0order_ref");
+    check(captured[0].shares, add.shares, "msg0shares");
+
+    check(captured[1].msg_type, MSG_EXC, "msg1type");
+    check(captured[1].order_ref, exc.order_ref_num, "msg1order_ref");
+    check(captured[1].shares, exc.shares, "msg1shares");
+
+    check(captured[2].msg_type, MSG_DEL, "msg2type");
+    check(captured[2].order_ref, del.order_ref_num, "msg2order_ref");
+}
+
+
+int main(int argc, char** argv) // (argument count (words typed), argument vector (words themselves))
 {
     Verilated::commandArgs(argc, argv); // give args to the runtime
     Vitch_parser* dut = new Vitch_parser; // alloc'd (Device-Under-Test)
 
-    reset(dut);
+    test_add_order(dut);
+    test_order_executed(dut);
+    test_order_delete(dut);
+    test_back2back(dut);
 
-    // TESTING //
-        AddOrder add;
-        add.stock_locate  = 1;
-        add.tracking_num  = 2;
-        add.timestamp = 0x0A4E22819000ULL;
-        add.order_ref_num = 0x38D;
-        add.is_buy = true;
-        add.shares = 300;
-        add.stock = "APPL";
-        add.price = 1234500;
-
-        uint8_t msg[ADD_ORDER_LEN];
-        build_add_order(msg, add);
-
-        send_msg(dut, msg, ADD_ORDER_LEN);
-
-        int waited = wait_for_msg(dut);
-        if (waited < 0) {
-            std::printf("FAILED (no message emitted within timeout period)");
-            return 1;
-        }
-
-        std::printf("TEST: an add order\n");
-        check(get_msg_type(dut), MSG_ADD, "msg_type");
-        check(get_is_buy(dut), add.is_buy, "is_buy");
-        check(get_locate(dut), add.stock_locate, "stock_locate");
-        check(get_timestamp(dut), add.timestamp, "timestamp");
-        check(get_order_ref(dut), add.order_ref_num, "order_ref_num");
-        check(get_shares(dut), add.shares, "shares");
-        check(get_stock(dut), ticker_to_u64(add.stock), "stock");
-        check(get_price(dut), add.price, "price");
-
-        std::printf("%s (failures: %d)\n", 
-                    failures ? "FAILED" : "PASSED", failures);
-    // TESTING //
-
+    std::printf("\n%s (Failures: %d)\n",
+                failures ? "FAILED" : "PASSED", failures);
+    
     dut->final(); // tells Verilator simulation is over
     delete dut; // free()
 
