@@ -1,8 +1,6 @@
 /*
 rm -rf obj_dir
-verilator --cc --exe --build -j 0 --top-module itch_parser \
-    rtl/msg_pkg.sv rtl/skid_buffer.sv rtl/itch_parser.sv \
-    tb/parser/tb_itch_parser.cpp
+verilator --cc --exe --build -j 0 --top-module itch_parser rtl/msg_pkg.sv rtl/skid_buffer.sv rtl/itch_parser.sv tb/parser/tb_itch_parser.cpp
 ./obj_dir/Vitch_parser
 */
 
@@ -11,61 +9,51 @@ verilator --cc --exe --build -j 0 --top-module itch_parser \
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
-
-#include "../shared/itch_messages.hpp"
+#include "../include/contracts.hpp"
+#include "../include/itch_messages.hpp"
 
 static constexpr int RESET_CYCLES = 5; // constexpr is C++ for eval this at compile time, not run time
 static constexpr int TDATA_WORDS = 12; // 384b = 12 words * 32 bits
 
+static int failures = 0;
+
 static void tick(Vitch_parser* dut) // 1 clock cycle
 {
+    REQUIRES(dut != nullptr);
+    //
+
     dut->clk = 0;
     dut->eval(); // recompute w clk LO (nothing captures)
     dut->clk = 1;
     dut->eval(); // rising edge (clk 0->1) so eval sees t hat and fires always_ff @(posedge) blocks
+    
+    //
+    ENSURES(dut->clk == 1);
 }
 
 static void reset(Vitch_parser* dut)
 {
+    REQUIRES(dut != nullptr);
+    //
+    
     dut->rst_n = 0;
     dut->s_axis_tvalid = 0;
     dut->s_axis_tdata = 0;
     dut->m_axis_tready = 1;
 
-    for (size_t i = 0; i < RESET_CYCLES; i++){
+    for (int i = 0; i < RESET_CYCLES; i++){
         tick(dut);
     }
 
     dut->rst_n = 1;
     tick(dut);
+
+    //
+    ENSURES(dut->rst_n == 1);
+    ENSURES(dut->m_axis_tvalid == 0);
+    ENSURES(dut->s_axis_tready == 1);
 }
 
-// ignores s_axis_tready for now - fix when backpressure test written
-static void push_byte(Vitch_parser* dut, uint8_t b)
-{
-    dut->s_axis_tdata = b;
-    dut->s_axis_tvalid = 1;
-    tick(dut);
-}
-
-static void send_msg(Vitch_parser* dut, const uint8_t* msg, size_t len)
-{
-    for (size_t i = 0; i < len; i++){
-        push_byte(dut, msg[i]);
-    }
-}
-
-static int wait_for_msg(Vitch_parser *dut, int max_cycles = 100)
-{
-    for (size_t i = 0; i < max_cycles; i++){
-        if (dut->m_axis_tvalid){
-            return i;
-        }
-        dut->s_axis_tvalid = 0;
-        tick(dut);
-    }
-    return -1;
-}
 
 /*
 word11:
@@ -100,39 +88,180 @@ match_num (64b) - 63:0
 // extract from padding
 static inline uint64_t get_match_num(Vitch_parser *dut) 
 {
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->m_axis_tvalid);
+    //
+
     return ((uint64_t)dut->m_axis_tdata[1] << 32) | dut->m_axis_tdata[0];
 }
 static inline uint32_t get_price(Vitch_parser *dut) 
 {
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->m_axis_tvalid);
+    //
+
     return dut->m_axis_tdata[2];
 }
 static inline uint64_t get_stock(Vitch_parser *dut) 
 {
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->m_axis_tvalid);
+    //
+
     return ((uint64_t)dut->m_axis_tdata[4] << 32) | dut->m_axis_tdata[3];
 }
 static inline uint32_t get_shares(Vitch_parser *dut) 
 {
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->m_axis_tvalid);
+    //
+
     return dut->m_axis_tdata[5];
 }
 static inline uint64_t get_order_ref(Vitch_parser *dut) 
 {
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->m_axis_tvalid);
+    //
+
     return ((uint64_t)dut->m_axis_tdata[7] << 32) | dut->m_axis_tdata[6];
 }
 static inline uint64_t get_timestamp(Vitch_parser *dut) 
 {
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->m_axis_tvalid);
+    //
+
     return ((uint64_t)dut->m_axis_tdata[9] << 32) | dut->m_axis_tdata[8];
 }
 static inline uint16_t get_locate(Vitch_parser *dut) 
 {
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->m_axis_tvalid);
+    //
+
     return (uint16_t)(dut->m_axis_tdata[10] & 0xFFFF);
 }
 static inline uint8_t get_msg_type(Vitch_parser *dut) 
 {
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->m_axis_tvalid);
+    //
+
     return (uint8_t)(dut->m_axis_tdata[11] & 0xF);
 }
 static inline bool get_is_buy(Vitch_parser *dut) 
 {
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->m_axis_tvalid);
+    //
+
     return (dut->m_axis_tdata[11] >> 4) & 1;
+}
+
+static int push_byte(Vitch_parser* dut, 
+    uint8_t b, 
+    bool *msg_out = nullptr, 
+    int max_wait = 100
+){
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->rst_n ==1);
+    REQUIRES(max_wait > 0);
+    //
+    
+    dut->s_axis_tdata = b;
+    dut->s_axis_tvalid = 1;
+
+    if (msg_out != nullptr){
+        *msg_out = false;
+    }
+
+    for (int wait = 0; wait < max_wait; wait++){
+        dut->eval();
+        bool accepted = dut->s_axis_tready;
+        
+        if (msg_out!=nullptr && dut->m_axis_tvalid && dut->m_axis_tready){
+            *msg_out = true;
+        }
+        
+        tick(dut);
+        if (accepted){
+            ENSURES(wait >= 0);
+            return wait;
+        }
+    }
+
+    std::printf("FAILED: byte stalled for >%d cycles\n", max_wait);
+    failures++;
+    return -1;
+
+}
+
+static void feed_byte(Vitch_parser* dut,
+    uint8_t b,
+    bool *got_msg,
+    uint8_t *out_type,
+    uint64_t *out_ref,
+    uint32_t *out_shares,
+    int max_wait = 100    
+){
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->rst_n == 1);
+    REQUIRES(got_msg != nullptr);
+    //
+
+    dut->s_axis_tdata = b;
+    dut->s_axis_tvalid = 1;
+    *got_msg = false;
+
+    for (int wait = 0; wait < max_wait; wait++){
+        dut->eval();
+        bool accepted = dut->s_axis_tready;
+
+        if (dut->m_axis_tvalid && dut->m_axis_tready && *got_msg==false){
+            *got_msg = true;
+            *out_type = get_msg_type(dut);
+            *out_ref = get_order_ref(dut);
+            *out_shares = get_shares(dut);
+        }
+
+        tick(dut);
+        if (accepted){
+            return;
+        }
+    }
+    std::printf("FAILED: byte stalled for >%d cycles\n", max_wait);
+    failures++;
+}
+
+static void send_msg(Vitch_parser* dut, const uint8_t* msg, size_t len)
+{
+    REQUIRES(dut != nullptr);
+    REQUIRES(msg != nullptr);
+    REQUIRES(len > 0);
+    REQUIRES(dut->rst_n == 1);
+    //
+    
+    for (size_t i = 0; i < len; i++){
+        push_byte(dut, msg[i]);
+    }
+}
+
+static int wait_for_msg(Vitch_parser *dut, int max_cycles = 100)
+{
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->rst_n == 1);
+    REQUIRES(max_cycles > 0);
+    //
+    
+    for (int i = 0; i < max_cycles; i++){
+        if (dut->m_axis_tvalid){
+            return i;
+        }
+        dut->s_axis_tvalid = 0;
+        tick(dut);
+    }
+    return -1;
 }
 
 // enum values (matches msg_pkg)
@@ -141,10 +270,11 @@ static constexpr uint8_t MSG_ADD  = 1;
 static constexpr uint8_t MSG_EXC  = 2;
 static constexpr uint8_t MSG_DEL  = 3;
 
-static int failures = 0;
-
 static void check(uint64_t actual, uint64_t expected, const char* name)
 {
+    REQUIRES(name != nullptr);
+    //
+    
     if (actual != expected){
         std::printf("FAIL %-14s got: 0x%llx, expected: 0x%llx\n",
                     name, (unsigned long long)actual, (unsigned long long)expected);
@@ -154,6 +284,9 @@ static void check(uint64_t actual, uint64_t expected, const char* name)
 
 static void test_add_order(Vitch_parser *dut)
 {
+    REQUIRES(dut != nullptr);
+    //
+    
     std::printf("TESTING: Add Order (A)\n");
     reset(dut);
 
@@ -190,6 +323,9 @@ static void test_add_order(Vitch_parser *dut)
 
 static void test_order_executed(Vitch_parser *dut)
 {
+    REQUIRES(dut != nullptr);
+    //
+    
     std::printf("TESTING: Order Executed (E)\n");
     reset(dut);
 
@@ -222,6 +358,9 @@ static void test_order_executed(Vitch_parser *dut)
 
 static void test_order_delete(Vitch_parser *dut)
 {
+    REQUIRES(dut != nullptr);
+    //
+
     std::printf("TESTING: Order Delete (D)\n");
     reset(dut);
 
@@ -250,6 +389,9 @@ static void test_order_delete(Vitch_parser *dut)
 
 static void test_back2back(Vitch_parser *dut)
 {
+    REQUIRES(dut != nullptr);
+    //
+
     std::printf("TESTING: Back to back stream (A -> E -> D)\n");
     reset(dut);
 
@@ -292,21 +434,26 @@ static void test_back2back(Vitch_parser *dut)
     int num_captured = 0;
 
     for (size_t i = 0; i < sizeof(stream); i++){
-        push_byte(dut, stream[i]);
+        bool got = false;
+        uint8_t t = 0;
+        uint64_t r = 0;
+        uint32_t s = 0;
 
-        if (dut->m_axis_tvalid && num_captured<3){
-            captured[num_captured].msg_type = get_msg_type(dut);
-            captured[num_captured].order_ref = get_order_ref(dut);
-            captured[num_captured].shares = get_shares(dut);
+        feed_byte(dut, stream[i], &got, &t, &r, &s);
+        
+        if (got && num_captured<3){
+            captured[num_captured].msg_type = t;
+            captured[num_captured].order_ref = r;
+            captured[num_captured].shares = s;
             num_captured++;
         }
     }
 
-    // when final byte goes in, 3rd msg hasnt come out yet so we need 1 more cycle for the skid buffer
-    // this ticks a few times w no input
-    for (int i = 0; i < 5 && num_captured<3; i++){
-        dut->s_axis_tvalid = 0; // no bytes left
-        tick(dut);
+    // last msg still moving when final byte lands;
+    // drain w no input and check on each cycle
+    dut->s_axis_tvalid = 0; // no bytes left
+    for (int i = 0; i<10 && num_captured<3; i++){
+        dut->eval();
 
         if (dut->m_axis_tvalid && num_captured<3){
             captured[num_captured].msg_type = get_msg_type(dut);
@@ -314,6 +461,8 @@ static void test_back2back(Vitch_parser *dut)
             captured[num_captured].shares = get_shares(dut);
             num_captured++;
         }
+
+        tick(dut);
     }
 
     check(num_captured, 3, "message count");
@@ -329,6 +478,127 @@ static void test_back2back(Vitch_parser *dut)
 
     check(captured[2].msg_type, MSG_DEL, "msg2type");
     check(captured[2].order_ref, del.order_ref_num, "msg2order_ref");
+}
+
+static void test_backpressure(Vitch_parser *dut)
+{
+    REQUIRES(dut != nullptr);
+    //
+
+    std::printf("TESTING: Backpressure (downstream stalling during stream)\n");
+    reset(dut);
+
+    OrderAdd add;
+    add.stock_locate = 1;
+    add.tracking_num = 1;
+    add.timestamp = 1000;
+    add.order_ref_num = 100;
+    add.is_buy = false;
+    add.shares = 500;
+    add.stock = "MSFT";
+    add.price = 1500000;
+
+    OrderExecuted exc;
+    exc.stock_locate = 1;
+    exc.tracking_num = 2;
+    exc.timestamp = 2000;
+    exc.order_ref_num = 100;
+    exc.shares = 200;
+    exc.match_num = 55;
+
+    OrderDelete del;
+    del.stock_locate = 1;
+    del.tracking_num = 3;
+    del.timestamp = 3000;
+    del.order_ref_num = 100;
+
+    uint8_t stream[ORDER_ADD_LEN+ORDER_EXECUTED_LEN+ORDER_DELETE_LEN];
+    build_order_add(&stream[0], add);
+    build_order_executed(&stream[ORDER_ADD_LEN], exc);
+    build_order_delete(&stream[ORDER_ADD_LEN+ORDER_EXECUTED_LEN], del);
+
+    // downstream should refuse everything from the start
+    // parser should consume bytes until skid buffer fills, then stall input
+    dut->m_axis_tready = 0;
+
+    // To remember what came out
+    struct CapturedMsg{
+        uint8_t msg_type;
+        uint64_t order_ref;
+        uint32_t shares;
+    };
+    CapturedMsg captured[3]; //1 slot per msg we expect
+    int num_captured = 0;
+
+    bool upstream_stalled = false;
+    bool tvalid_held = false;
+
+    for (size_t i = 0; i < sizeof(stream); i++){
+        // release backpressure near end to check both stall and recovery
+        if (i == sizeof(stream) - 10){
+            dut->m_axis_tready = 1;
+        }
+
+        // did parser refuse input?
+        dut->eval();
+        if (!dut->s_axis_tready){
+            upstream_stalled = true;
+        }
+
+        // if output valid but not accepted then tvalid stays HI next cycle
+        if (dut->m_axis_tvalid && !dut->m_axis_tready){
+            tvalid_held = true;
+        }
+
+        bool got = false;
+        uint8_t t = 0;
+        uint64_t r = 0;
+        uint32_t s = 0;
+
+        feed_byte(dut, stream[i], &got, &t, &r, &s);
+
+        if (got && num_captured<3){
+            captured[num_captured].msg_type = t;
+            captured[num_captured].order_ref = r;
+            captured[num_captured].shares = s;
+            num_captured++;
+        }
+    }
+
+    // drain (tready=HI; stop input; collect leftovers)
+    dut->m_axis_tready = 1;
+    dut->s_axis_tvalid = 0; // no bytes left
+    for (int i = 0; i<20 && num_captured<3; i++){
+        dut->eval();
+
+        if (dut->m_axis_tvalid && num_captured<3){
+            captured[num_captured].msg_type = get_msg_type(dut);
+            captured[num_captured].order_ref = get_order_ref(dut);
+            captured[num_captured].shares = get_shares(dut);
+            num_captured++;
+        }
+
+        tick(dut);
+    }
+
+    // check nothing was lost despite stalling
+    check(num_captured, 3, "messages survived stall");
+    check(upstream_stalled, 1, "parser stalled input");
+    check(tvalid_held, 1, "output held while stalled");
+    
+    if (num_captured != 3) return;
+
+    check(captured[0].msg_type, MSG_ADD, "msg0type");
+    check(captured[0].order_ref, add.order_ref_num, "msg0order_ref");
+    check(captured[0].shares, add.shares, "msg0shares");
+
+    check(captured[1].msg_type, MSG_EXC, "msg1type");
+    check(captured[1].order_ref, exc.order_ref_num, "msg1order_ref");
+    check(captured[1].shares, exc.shares, "msg1shares");
+
+    check(captured[2].msg_type, MSG_DEL, "msg2type");
+    check(captured[2].order_ref, del.order_ref_num, "msg2order_ref");
+
 }
 
 static uint64_t rand_u64(void)
@@ -357,6 +627,10 @@ struct Expected{
 };
 static void test_random_stream(Vitch_parser *dut, int num_msgs, unsigned int seed)
 {
+    REQUIRES(dut != nullptr);
+    REQUIRES(num_msgs >= 0);
+    //
+
     std::printf("TESTING: Randomized stream (%d messages, seed %u)\n", num_msgs, seed);
     reset(dut);
     srand(seed); // for reproducibility
@@ -431,42 +705,57 @@ static void test_random_stream(Vitch_parser *dut, int num_msgs, unsigned int see
 
     int num_seen = 0;
     int local_failures = failures;
+
     for (size_t i = 0; i < stream_len; i++){
-        push_byte(dut, stream[i]);
-        if (dut->m_axis_tvalid && num_seen < num_msgs){
-            const Expected &e = expected[num_seen];
-            if (get_msg_type(dut) != e.msg_type ||
-                get_locate(dut) != e.stock_locate ||
-                get_timestamp(dut) != e.timestamp ||
-                get_order_ref(dut) != e.order_ref_num) {
-                std::printf("  FAIL msg %d (type %u)\n", num_seen, e.msg_type);
+        dut->s_axis_tdata = stream[i];
+        dut->s_axis_tvalid = 1;
+
+        bool captured_curr_byte = false;
+
+        for (int wait = 0; wait < 100; wait++){
+            dut->eval();
+            bool accepted = dut->s_axis_tready;
+            if (dut->m_axis_tvalid && dut->m_axis_tready && !captured_curr_byte && num_seen<num_msgs){
+                captured_curr_byte = true;
+                const Expected &e = expected[num_seen];
+                
                 check(get_msg_type(dut), e.msg_type, "type");
                 check(get_locate(dut), e.stock_locate, "locate");
                 check(get_timestamp(dut), e.timestamp, "timestamp");
                 check(get_order_ref(dut), e.order_ref_num, "order_ref");
+                
+                if (e.msg_type == MSG_ADD){
+                    check(get_is_buy(dut), e.is_buy, "is_buy");
+                    check(get_shares(dut), e.shares, "shares");
+                    check(get_stock(dut), e.stock, "stock");
+                    check(get_price(dut), e.price, "price");
+                } 
+                
+                else if (e.msg_type == MSG_EXC){
+                    check(get_shares(dut), e.shares, "shares");
+                    check(get_match_num(dut), e.match_num, "match_num");
+                }
+                
+                num_seen++;
             }
-            if (e.msg_type == MSG_ADD) {
-                check(get_is_buy(dut), e.is_buy, "is_buy");
-                check(get_shares(dut), e.shares, "shares");
-                check(get_stock(dut), e.stock, "stock");
-                check(get_price(dut), e.price, "price");
-            } else if (e.msg_type == MSG_EXC) {
-                check(get_shares(dut), e.shares, "shares");
-                check(get_match_num(dut), e.match_num, "match_num");
+
+            tick(dut);
+            if (accepted){
+                break;
             }
-            num_seen++;
         }
     }
 
-    for (int i = 0; i<5 && num_seen<num_msgs; i++){
-        dut->s_axis_tvalid = 0;
-        tick(dut);
-        if (dut->m_axis_tvalid) {
+    dut->s_axis_tvalid = 0;
+    for (int i = 0; i<10 && num_seen<num_msgs; i++){
+        dut->eval();
+        if (dut->m_axis_tvalid && dut->m_axis_tready && num_seen<num_msgs){
             const Expected &e = expected[num_seen];
             check(get_msg_type(dut), e.msg_type, "final type");
             check(get_order_ref(dut), e.order_ref_num, "final order_ref");
             num_seen++;
         }
+        tick(dut);
     }
 
     check(num_seen, num_msgs, "messages received");
@@ -489,6 +778,7 @@ int main(int argc, char** argv) // (argument count (words typed), argument vecto
     test_order_executed(dut);
     test_order_delete(dut);
     test_back2back(dut);
+    test_backpressure(dut);
 
     test_random_stream(dut, 100000, 12345);
 

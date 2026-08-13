@@ -4,10 +4,14 @@
 #include <cstdint>
 #include <cstring>
 #include <cstddef>
+#include "contracts.hpp"
 
 // 2 byte fields (stock locate, tracking num)
 static inline void write_u16_bigendian(uint8_t *dest, uint16_t value)
 {
+    REQUIRES(dest != nullptr);
+    // caller must give >= 2 writable bytes
+
     dest[0] = (uint8_t)(value>>8);
     dest[1] = (uint8_t)(value);
 }
@@ -15,6 +19,9 @@ static inline void write_u16_bigendian(uint8_t *dest, uint16_t value)
 // 4 byte fields (shares, price)
 static inline void write_u32_bigendian(uint8_t *dest, uint32_t value)
 {
+    REQUIRES(dest != nullptr);
+    // caller must give >= 4 writable bytes
+
     dest[0] = (uint8_t)(value>>24);
     dest[1] = (uint8_t)(value>>16);
     dest[2] = (uint8_t)(value>>8);
@@ -24,6 +31,9 @@ static inline void write_u32_bigendian(uint8_t *dest, uint32_t value)
 // 6 byte fields (timestamp)
 static inline void write_u48_bigendian(uint8_t *dest, uint64_t value)
 {   
+    REQUIRES(dest != nullptr);
+    // caller must give >= 6 writable bytes
+    
     // IGNORE 16 BITS (48 bits r held in a 64-bit variable here)
     // (since obv theres no 6byte number we can use)
     dest[0] = (uint8_t)(value>>40);
@@ -37,6 +47,9 @@ static inline void write_u48_bigendian(uint8_t *dest, uint64_t value)
 // 8  byte fields (order ref num, match num)
 static inline void write_u64_bigendian(uint8_t *dest, uint64_t value)
 {
+    REQUIRES(dest != nullptr);
+    // caller must give >= 8 writable bytes
+    
     dest[0] = (uint8_t)(value>>56);
     dest[1] = (uint8_t)(value>>48);
     dest[2] = (uint8_t)(value>>40);
@@ -49,6 +62,9 @@ static inline void write_u64_bigendian(uint8_t *dest, uint64_t value)
 
 static inline uint64_t ticker_to_u64(const char *symbol)
 {
+    REQUIRES(symbol != nullptr);
+    //
+    
     uint8_t padded[8];
     std::memset(padded, ' ', 8);
 
@@ -75,6 +91,11 @@ static inline void build_common_header(
     uint64_t timestamp,
     uint64_t order_ref_num
 ){
+    REQUIRES(dest != nullptr);
+    REQUIRES(type_char == 'A' || type_char == 'E' || type_char == 'D');
+    REQUIRES(timestamp <= 0xFFFFFFFFFFFFULL);
+    //
+
     dest[0] = (uint8_t)type_char;
     write_u16_bigendian(&dest[1], stock_locate);
     write_u16_bigendian(&dest[3], tracking_num);
@@ -96,6 +117,10 @@ struct OrderAdd{
 };
 static inline void build_order_add(uint8_t *dest, const OrderAdd &msg)
 {
+    REQUIRES(dest != nullptr);
+    REQUIRES(msg.stock != nullptr);
+    //
+    
     // common fields
     build_common_header(dest, 'A',
                         msg.stock_locate, msg.tracking_num,
@@ -112,6 +137,9 @@ static inline void build_order_add(uint8_t *dest, const OrderAdd &msg)
     std::memcpy(&dest[24], msg.stock, len);
 
     write_u32_bigendian(&dest[32], msg.price); //@32
+
+    //
+    ENSURES(dest[0] == 'A');
 }
 
 // ORDER EXECUTED
@@ -126,6 +154,9 @@ struct OrderExecuted{
 };
 static inline void build_order_executed(uint8_t *dest, const OrderExecuted &msg)
 {
+    REQUIRES(dest != nullptr);
+    //
+
     // common fields
     build_common_header(dest, 'E', 
                         msg.stock_locate, msg.tracking_num,
@@ -133,6 +164,9 @@ static inline void build_order_executed(uint8_t *dest, const OrderExecuted &msg)
     // rest of fields
     write_u32_bigendian(&dest[19], msg.shares);
     write_u64_bigendian(&dest[23], msg.match_num);
+
+    //
+    ENSURES(dest[0] == 'E');
 }
 
 // ORDER DELETE
@@ -145,11 +179,17 @@ struct OrderDelete{
 };
 static inline void build_order_delete(uint8_t *dest, const OrderDelete &msg)
 {
+    REQUIRES(dest != nullptr);
+    //
+
     // common fields
     build_common_header(dest, 'D',
                         msg.stock_locate, msg.tracking_num,
                         msg.timestamp, msg.order_ref_num);
     // no other fields
+
+    //
+    ENSURES(dest[0] == 'D');
 }
 
 #endif // ITCH_MESSAGES_HPP

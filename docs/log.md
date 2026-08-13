@@ -113,7 +113,7 @@
 - Also had to group sub-byte fields since having 1-bit fields between multi-byte fields misaligns things.
 
 ### log-21: Skid Buffer Latency Measured (2026-08-06)
-- I completed a test end-to-end. 16 bytes in, `m_axis_tvalid` asserts 1 cycle after the final byte, holds for exactly 1 cycle, then drops. This means the buffer latches and drains correctly, so the predictive cost in log-18 is now confiremd!
+- I completed a test end-to-end. 36 bytes in, `m_axis_tvalid` asserts 1 cycle after the final byte, holds for exactly 1 cycle, then drops. This means the buffer latches and drains correctly, so the predictive cost in log-18 is now confiremd!
 
 ### log-22: The testbench polling for conditions (2026-08-06)
 - Rather than counting cycles (I got worried hardcoding tick "x" times would break once pipeline depth changes), I wrote a `wait_for_msg()` function that ticks until `m_axis_tvalid` asserts (with a timeout of course), and then returns the number of cycles waited. 
@@ -126,3 +126,12 @@
 ### log-24: Verifying the parser randomized (2026-08-10)
 - 100,000 messages passed with random fiedl values, streamed b2b, and checked in every field against pre-determined expectations at generation time of those messages.
 - It's a regression, not a stress test, since the seed is fixed and printed on failure so we can reproduce them, and every msg is checked rather than counted.
+
+### log-25: Contracts for testbench (2026-08-13)
+- Thanks to 15-122 this summer I felt obligated to make the C++ code proveably correct (or as much as I could). So I added REQUIRES/ENSURES (using assert()) so I can check preconditions and postconditions.
+
+### log-26: Parser verified!!! (2026-08-13)
+- Six tests passed A,E,D individually, back-to-back A to E to D, backpressure with mid-stream stalling, and finally 100,000 randomized tests with mixed-type random fields!
+- Found 2 RTL bugs (bug-05, bug-06) which were AXI violations on each port.
+- Takeaways!: Need to make sure both sides of AXI interface respect the handshake, can't have the producer or consumer end up "lying" to one another.
+- Parser is DONE; I've decided to postpone F/C/X/U message types for now and just maintain A/E/D to build the working book so we can get to real numbers on the ZCU104. Wrap back around to finish the other message types afterwards.

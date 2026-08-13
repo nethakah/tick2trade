@@ -30,7 +30,7 @@ module itch_parser
 
     // dont accept bytes when we're holding output which the skid buffer cannot take
     // skid fills --> parser stops consuming --> FIFO fills --> DMA pauses = lossless
-    assign s_axis_tready = !(fsm_tvalid && !fsm_tready); // !(i have output that hasn't been taken) == !(stuck)
+    assign s_axis_tready = !fsm_tvalid; // since fsm_tvalid is only high when a msg is waiting to handoff
 
     // padding added for testbench C++ extraction from bits easier
     assign fsm_tdata.rsvd0 = '0;
@@ -48,7 +48,8 @@ module itch_parser
         end else begin
             fsm_tvalid <= 1'b0;
 
-            if (s_axis_tvalid) begin
+            // only transfer when tvalid && tready
+            if (s_axis_tvalid && s_axis_tready) begin
                 case (state)
                     READ_TYPE: begin
                         if (msg_length(s_axis_tdata) != 6'd0) begin // recognized type

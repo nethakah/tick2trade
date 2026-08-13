@@ -11,3 +11,4 @@ obj_dir/
 *.sim/
 *.gen/
 *.hw/
+__MACOSX/
