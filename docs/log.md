@@ -157,9 +157,10 @@
 
 ### log-30: Orderbook msg_pkg.sv (2026-08-15)
 - The Columbia paper I referenced earlier in the logs happens to use an AVL for the L3 in order to get O(log n) with rebalance on insert. However, in the HFT context, this is not deterministic since the tree depth depends on how many orders are live meaning it is slow when the book is deep (which is precisely when it matters for us to not fail). 
-- Hence, I instead decided to just use a fixed probe depth. I set MAX_PROBES=4 for now as a tuning parameter (adjust after instrumenting on the failure count on real data with actual evidence). Hence we'll: hash the order_ref, linearly probe (at most) MAX_PROBES slots, then give up so we have constant latency.
-- A good takeaway here is that the fix for high failure rates is a BIGGER TABLE rather than deeper probing, since it's better to sacrifice memory than latency in the HFT use-case (particularly in my context).
-- For probing failure, we just drop the order and increment a counter. The bigger goal here is to not stall because that sets everything off, it's better to have an honest failure the way I see it.
+- First thought was to use capped linear probing but it's actually bad too since dropping Adds will mess up later Executes entirely.
+- Eventually got the right answer which is from existing FPGA hash-table literature, which is to widen the memory. We'll hold X entries in one word, read in a single access with all keys compared in parallel. Hence we're only taxed 1 memory read, 4 comparators (if we cap at 4), and get constant latency with no probing at all.
+- Overflow will be handled by sizing instead of dropping orders since 27Mb of UltraRAM gives us 16,000+ live orders along with tracking an overflow counter as a status reg to make sure it cannot happen.
+- Still deterministic, NOT average. 
 
 ### log-31: L3 existence rationale (2026-08-15)
 - With ITCH, 'E' (executed) and 'D' (delete) messages only have order_ref_num and literally no information on stock symbol or price. So we need to look up what order this reference number refers to.
