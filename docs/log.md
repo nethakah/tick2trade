@@ -142,3 +142,15 @@
 - Measured synchronizer latency, `empty` deasserts around 24 time units (around 2 r_clk periods) post-write. So that's the 2-flop crossing cost.
 - Small bug found in TB: I checked write being refused when full straight after the 16th write, but `full` was computedin the write domain from the sync'd read pointer so there's lag in the fill so the FIFO accepted the write. Instead I let it run until `full` asserts before checking refusal.
 - I wanted to note that CDC flags are conservative but stale, meaning any logic that drives this FIFO has to respect the lagging of the flags by a couple of cycles. If you assume they update instantly, the FIFO gets driven into states it shouldn't be at.
+
+### log-28: FIFO coverage gap (2026-08-15)
+- For the async FIFO testbench, the 4 tests use SEQUENTIAL DATA and a single clock ratio (20/13 but adjustable to other coprime values).
+- Untested still: randomized payloads; other clock ratios / drift patterns.
+- Should be fine for now since the FIFO is agnostic with regards to data (we test moving 1-16 for any values so any structural bugs should be caught already). 
+- Notes for me: revisit this if there are FIFO-esque bugs (no idea how this will look but we shall see) and update tests to randomize parameters afterwards.
+
+### log-29: MoldUDP64 deframer verified (2026-08-15)
+- 2 tests: 1 packet with 2 msg; 2 packets with a sequence jump for gap detecting.
+- Just for reference, the deframer exists since the parser assumes byte 0 is a message type, even though the real data arrives formatted like: `[Session(10B)][Sequence(8B)][Count(2B)][Len(2B)][ITCH msg][Len(2B)][ITCH msg]...`. So we can't feed raw packets to the parser straight away, we need the deframer to strip the 20B header and all the 2B length prefixes.
+- Also used a shift reg for every multi-byte field to keep the low bits then append the new byte. Then after N bytes the first byte received will walk to the top which is big-endian conversion easy and free.
+- `s_axis_tlast` used for end-of-packet checking. Technically the FSM already knows the packet ends from the msg_count but this is a free check to make sure no packets were truncated or malformed along the way. It's redundant but free kind of like I did in log-9 cross-checking.

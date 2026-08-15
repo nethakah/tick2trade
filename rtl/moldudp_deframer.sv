@@ -50,6 +50,7 @@ module moldudp_deframer
             packet_count <= 32'd0;
             first_packet <= 1'b1;
             m_axis_tvalid <= 1'b0;
+            packet_error <= 1'b0;
         end
         else begin
             gap_detected <= 1'b0;
@@ -139,7 +140,10 @@ module moldudp_deframer
                                 end
                                 state <= READ_SESSION; // next packet header
                             end
-                            else begin
+                            else begin // not final msg in packet
+                                if (s_axis_tlast) begin
+                                    packet_error <= 1'b1; // packet ended early so must have msgs missing
+                                end
                                 msg_count <= msg_count - 16'd1;
                                 state <= READ_LEN; // next msg length
                             end
