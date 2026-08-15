@@ -28,7 +28,8 @@ package msg_pkg;
     } msg_t; // 384b with padding (so every field starts on a 32-bit boundary)
 
     function automatic logic[5:0] msg_length( // bytes
-    input logic[7:0] type_byte); 
+        input logic[7:0] type_byte
+    ); 
         case (type_byte)
             // offset of last field + len of last field
             "A": msg_length = 6'd36;
@@ -39,7 +40,8 @@ package msg_pkg;
     endfunction
 
     function automatic msgtype_enum decode_type(
-    input logic[7:0] type_byte); 
+        input logic[7:0] type_byte
+    ); 
         case (type_byte)
             "A": decode_type = MSG_ADD;
             "E": decode_type = MSG_EXC;
@@ -59,11 +61,22 @@ package msg_pkg;
     } order_entry_t; // 160b with padding (so every field starts on 32-bit boundary)
     
     localparam int ENTRIES_PER_BUCKET = 4; // each bucket has this many entries in 1 memory word (parallel compared)
-    localparam int BOOK_ADRR_WIDTH = 12; // 4096 buckets
+    localparam int BOOK_ADDR_WIDTH = 12; // 4096 buckets
     localparam int NUM_BUCKETS = 1 << BOOK_ADDR_WIDTH;
     localparam int BOOK_CAP = NUM_BUCKETS * ENTRIES_PER_BUCKET; // 16384 live orders
 
     typedef order_entry_t[ENTRIES_PER_BUCKET-1:0] bucket_t; // 640b per bucket
+
+    function automatic logic[BOOK_ADDR_WIDTH-1:0] hash_order_ref(
+        input logic[63:0] order_ref
+    );
+        logic[15:0] folded;
+        // use XOR folding to get 64b key into a 12b bucket number (mix all 64 bits)
+        folded = order_ref[15:0] ^ order_ref[31:16] ^ order_ref[47:32] ^ order_ref[63:48];
+        // NOTE: DO NOT just take the low 12b of order_ref bc NASDAQ assigns refs sequentially which is a problem for bursts of Adds
+        
+        hash_order_ref = folded[BOOK_ADDR_WIDTH-1:0];
+    endfunction
 
 endpackage
 
