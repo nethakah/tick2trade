@@ -5,25 +5,25 @@ module moldudp_deframer
     input logic rst_n,
 
     // axi4-stream slave
-    input logic [7:0] s_axis_tdata, // raw packet bytes
+    input logic[7:0] s_axis_tdata, // raw packet bytes
     input logic s_axis_tvalid,
     input logic s_axis_tlast, // final byte of 1 UDP packet
     output logic s_axis_tready,
 
     // axi4-stream master
-    output logic [7:0] m_axis_tdata, // bare ITCH bytes to send to parser
+    output logic[7:0] m_axis_tdata, // bare ITCH bytes to send to parser
     output logic m_axis_tvalid,
     input logic m_axis_tready,
 
     // status
-    output logic [63:0] sequence_num, // spec field is 8 bytes
+    output logic[63:0] sequence_num, // spec field is 8 bytes
     output logic gap_detected, // 1 cycle pulse
-    output logic [31:0] gap_count, // total msgs missed
-    output logic [31:0] packet_count, // total packets seen
+    output logic[31:0] gap_count, // total msgs missed
+    output logic[31:0] packet_count, // total packets seen
     output logic packet_error
 );
     
-    typedef enum logic [2:0]{
+    typedef enum logic[2:0]{
         READ_SESSION = 3'd0, // 10 header bytes; discarded
         READ_SEQUENCE = 3'd1, // 8 bytes; sequence_num
         READ_COUNT = 3'd2, // 2 bytes; msg_count - gap check here
@@ -32,10 +32,10 @@ module moldudp_deframer
     } state_enum;
     state_enum state;
 
-    logic [3:0] byte_count; // pos in current field
-    logic [15:0] msg_count; // msgs left in this packet
-    logic [15:0] curr_msg_len; // bytes left in curr msg
-    logic [63:0] expected_sequence; // prev seq + prev count
+    logic[3:0] byte_count; // pos in current field
+    logic[15:0] msg_count; // msgs left in this packet
+    logic[15:0] curr_msg_len; // bytes left in curr msg
+    logic[63:0] expected_sequence; // prev seq + prev count
     logic first_packet; // suppress the gap check on the first packet (unnecessary/bug)
 
     // stall on our own pending output (dont emulate bug-04)

@@ -6,7 +6,7 @@ module itch_parser
 
     // Slave - raw ITCH byte stream in
     // transfer only on tvalid && tready
-    input logic [7:0] s_axis_tdata, // 1 ITCH byte
+    input logic[7:0] s_axis_tdata, // 1 ITCH byte
     input logic       s_axis_tvalid, // upstream (MoldUDP64 deframer or tb): validate byte is real
     output logic      s_axis_tready, // us: always 1 for now (we can always accept 1 byte)
 
@@ -15,14 +15,14 @@ module itch_parser
     output logic      m_axis_tvalid, // us: bundle is valid
     input logic       m_axis_tready // downstream (orderbook): it can accept stuff
 );
-    typedef enum logic [0:0] {
+    typedef enum logic{
         READ_TYPE = 1'b0, // incoming byte is msg type code (offset 0)
         READ_BODY = 1'b1 // incoming byte is a field byte of curr msg
     } state_enum;
 
     state_enum state;
-    logic [5:0] byte_index; // offset of current byte arriving
-    logic [5:0] curr_len; // len of msg being consumed
+    logic[5:0] byte_index; // offset of current byte arriving
+    logic[5:0] curr_len; // len of msg being consumed
 
     msg_t fsm_tdata; // FSM's output (feeds skid buffer (slave))
     logic fsm_tvalid;

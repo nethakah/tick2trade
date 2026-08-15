@@ -9,35 +9,35 @@ module async_fifo #(
     input logic w_clk,
     input logic w_rst_n,
     input logic w_enbl,
-    input logic [DATA_WIDTH-1:0] w_data,
+    input logic[DATA_WIDTH-1:0] w_data,
     output logic full,
     
     // read
     input logic r_clk,
     input logic r_rst_n,
     input logic r_enbl,
-    output logic [DATA_WIDTH-1:0] r_data,
+    output logic[DATA_WIDTH-1:0] r_data,
     output logic empty
 );
     localparam int ADDR_WIDTH = $clog2(DEPTH);
 
-    logic [DATA_WIDTH-1:0] mem [DEPTH];
+    logic[DATA_WIDTH-1:0] mem[DEPTH];
 
     // binary pointers for incremeneting and addressing memory
-    logic [ADDR_WIDTH:0] w_ptr_bnry;
-    logic [ADDR_WIDTH:0] r_ptr_bnry;
+    logic[ADDR_WIDTH:0] w_ptr_bnry;
+    logic[ADDR_WIDTH:0] r_ptr_bnry;
 
     // gray coded copies to cross clock domains (1 bit change per increment)
-    logic [ADDR_WIDTH:0] w_ptr_gray;
-    logic [ADDR_WIDTH:0] r_ptr_gray;
+    logic[ADDR_WIDTH:0] w_ptr_gray;
+    logic[ADDR_WIDTH:0] r_ptr_gray;
 
-    logic [ADDR_WIDTH:0] r_ptr_gray_q1;
-    logic [ADDR_WIDTH:0] r_ptr_gray_q2;
-    logic [ADDR_WIDTH:0] w_ptr_gray_q1;
-    logic [ADDR_WIDTH:0] w_ptr_gray_q2;
+    logic[ADDR_WIDTH:0] r_ptr_gray_q1;
+    logic[ADDR_WIDTH:0] r_ptr_gray_q2;
+    logic[ADDR_WIDTH:0] w_ptr_gray_q1;
+    logic[ADDR_WIDTH:0] w_ptr_gray_q2;
 
-    logic [ADDR_WIDTH:0] w_ptr_bnry_next;
-    logic [ADDR_WIDTH:0] r_ptr_bnry_next;
+    logic[ADDR_WIDTH:0] w_ptr_bnry_next;
+    logic[ADDR_WIDTH:0] r_ptr_bnry_next;
 
     logic do_write;
     logic do_read;
@@ -86,7 +86,7 @@ module async_fifo #(
     // gray = bin ^ (bin >> 1):
     // so flipping bin's MSB flips gray's MSB, flips next bit down, and every lower gray bit is not touched
     // so r_ptr_gray_lapped = r_ptr_gray with TOP 2 gray bits inverted
-    logic [ADDR_WIDTH:0] r_ptr_gray_lapped;
+    logic[ADDR_WIDTH:0] r_ptr_gray_lapped;
     assign r_ptr_gray_lapped = {~r_ptr_gray_q2[ADDR_WIDTH:ADDR_WIDTH-1],
                                 r_ptr_gray_q2[ADDR_WIDTH-2:0]};
     assign full = (w_ptr_gray == r_ptr_gray_lapped);
