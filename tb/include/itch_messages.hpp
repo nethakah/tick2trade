@@ -192,4 +192,32 @@ static inline void build_order_delete(uint8_t *dest, const OrderDelete &msg)
     ENSURES(dest[0] == 'D');
 }
 
+// MOLDUDP
+static constexpr size_t MOLD_HEADER_LEN = 20;
+
+// write header into dest (caller appends msgs after it)
+static inline void build_mold_header(uint8_t *dest, uint64_t sequence, uint16_t msg_count){
+    REQUIRES(dest != nullptr);
+    //
+
+    std::memset(&dest[0], 'S', 10);
+    write_u64_bigendian(&dest[10], sequence);
+    write_u16_bigendian(&dest[18], msg_count);
+
+    //
+    ENSURES(dest[0] == 'S');
+}
+
+// prepend 2-byte len before ITCH msg and return bytes written
+static inline size_t build_mold_msg(uint8_t *dest, const uint8_t *itch, uint16_t len){
+    REQUIRES(dest != nullptr);
+    REQUIRES(itch != nullptr);
+    REQUIRES(len > 0);
+    //
+
+    write_u16_bigendian(&dest[0], len);
+    std::memcpy(&dest[2], itch, len);
+    return len + 2;
+}
+
 #endif // ITCH_MESSAGES_HPP

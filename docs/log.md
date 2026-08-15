@@ -135,3 +135,10 @@
 - Found 2 RTL bugs (bug-05, bug-06) which were AXI violations on each port.
 - Takeaways!: Need to make sure both sides of AXI interface respect the handshake, can't have the producer or consumer end up "lying" to one another.
 - Parser is DONE; I've decided to postpone F/C/X/U message types for now and just maintain A/E/D to build the working book so we can get to real numbers on the ZCU104. Wrap back around to finish the other message types afterwards.
+
+### log-27: Async FIFO verified (2026-08-14)
+- Tested: reset, 1-word crossing, fill/drain, 200 W/R pairs to wrap the wheel 12 times.
+- No tick() here, used 2 clocks with coprime periods which increment by step() function so the edges go relative to each other.
+- Measured synchronizer latency, `empty` deasserts around 24 time units (around 2 r_clk periods) post-write. So that's the 2-flop crossing cost.
+- Small bug found in TB: I checked write being refused when full straight after the 16th write, but `full` was computedin the write domain from the sync'd read pointer so there's lag in the fill so the FIFO accepted the write. Instead I let it run until `full` asserts before checking refusal.
+- I wanted to note that CDC flags are conservative but stale, meaning any logic that drives this FIFO has to respect the lagging of the flags by a couple of cycles. If you assume they update instantly, the FIFO gets driven into states it shouldn't be at.
