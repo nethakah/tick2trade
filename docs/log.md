@@ -154,3 +154,13 @@
 - Just for reference, the deframer exists since the parser assumes byte 0 is a message type, even though the real data arrives formatted like: `[Session(10B)][Sequence(8B)][Count(2B)][Len(2B)][ITCH msg][Len(2B)][ITCH msg]...`. So we can't feed raw packets to the parser straight away, we need the deframer to strip the 20B header and all the 2B length prefixes.
 - Also used a shift reg for every multi-byte field to keep the low bits then append the new byte. Then after N bytes the first byte received will walk to the top which is big-endian conversion easy and free.
 - `s_axis_tlast` used for end-of-packet checking. Technically the FSM already knows the packet ends from the msg_count but this is a free check to make sure no packets were truncated or malformed along the way. It's redundant but free kind of like I did in log-9 cross-checking.
+
+### log-30: Orderbook msg_pkg.sv (2026-08-15)
+- The Columbia paper I referenced earlier in the logs happens to use an AVL for the L3 in order to get O(log n) with rebalance on insert. However, in the HFT context, this is not deterministic since the tree depth depends on how many orders are live meaning it is slow when the book is deep (which is precisely when it matters for us to not fail). 
+- Hence, I instead decided to just use a fixed probe depth. I set MAX_PROBES=4 for now as a tuning parameter (adjust after instrumenting on the failure count on real data with actual evidence). Hence we'll: hash the order_ref, linearly probe (at most) MAX_PROBES slots, then give up so we have constant latency.
+- A good takeaway here is that the fix for high failure rates is a BIGGER TABLE rather than deeper probing, since it's better to sacrifice memory than latency in the HFT use-case (particularly in my context).
+- For probing failure, we just drop the order and increment a counter. The bigger goal here is to not stall because that sets everything off, it's better to have an honest failure the way I see it.
+
+### log-31: L3 existence rationale (2026-08-15)
+- With ITCH, 'E' (executed) and 'D' (delete) messages only have order_ref_num and literally no information on stock symbol or price. So we need to look up what order this reference number refers to.
+- The L3 book is the lookup.

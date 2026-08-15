@@ -1,13 +1,13 @@
 package msg_pkg;
 
-    typedef enum logic [3:0] {
+    typedef enum logic [3:0]{
         MSG_NONE = 4'd0, // no msg or unrecognized type
         MSG_ADD = 4'd1, // add order (A)
         MSG_EXC = 4'd2, // order execute (E)
         MSG_DEL = 4'd3 // order delete (D)
     } msgtype_enum;
 
-    typedef struct packed {
+    typedef struct packed{
     // declaration order is the bit order for ALL message types (wont match wire format from NASDAQ)
     // commented is wire format @byte location, actual parser handed down format is the order of the fields
         logic [26:0] rsvd0;         // reserved for C++ padding
@@ -17,7 +17,7 @@ package msg_pkg;
         logic [15:0] rsvd1;         // reserved for C++ padding
         logic [15:0] stock_locate;  // @1 book array index 
         
-        logic [15:0] rsvd2;     // reserved for C++ padding
+        logic [15:0] rsvd2;         // reserved for C++ padding
         logic [47:0] timestamp;     // @5 ns since 12am
         
         logic [63:0] order_ref_num; // @11 book key
@@ -47,6 +47,20 @@ package msg_pkg;
             default: decode_type = MSG_NONE;
         endcase
     endfunction
+
+    typedef struct packed{
+        logic [13:0] rsvd;      // reserved for C++ padding
+        logic valid;            // slot occupied
+        logic is_buy;
+        logic [15:0] stock_locate;
+        logic [31:0] price;
+        logic [31:0] shares;
+        logic [63:0] order_ref_num;
+    } order_entry_t; // 160b with padding (so every field starts on 32-bit boundary)
+    
+    localparam int BOOK_ADDR_WIDTH = 12;
+    localparam int BOOK_SIZE = 1 << BOOK_ADDR_WIDTH;
+    localparam int MAX_PROBES = 4; // fixed so we have constant lookup latency
 
 endpackage
 

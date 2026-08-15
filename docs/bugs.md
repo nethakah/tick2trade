@@ -4,7 +4,7 @@
 
 ### bug-01: Off-by-one on ITCH field offset (18 vs. 19)
 - Symptom: Computed E's executed shares starting at offset 18.
-- Cause: Reasoned from where prev field ENDED rather than running sums; the order reference number starts at 11 and is 8 bytes, so [11-18] are occupied and the next field starts at 11+8=19.
+- Cause: Reasoned from where prev field ENDED rather than running sums; the order reference number starts at 11 and is 8 bytes, so `[11-18]` are occupied and the next field starts at 11+8=19.
 - Fix: 18 -> 19
 
 ### bug-02: Verilator reference to msg_t
