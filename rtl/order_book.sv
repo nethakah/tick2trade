@@ -27,7 +27,9 @@ module order_book
     } book_state_enum;
     book_state_enum state;
 
-    bucket_t book_mem[NUM_BUCKETS]; // the L3 table - 1 read for whole bucket
+    bucket_t book_mem[NUM_BUCKETS]; // L3 table - 1 read for whole bucket
+    level_t bid_levels[NUM_LEVELS]; // L2 bids
+    level_t ask_levels[NUM_LEVELS]; // L2 asks
 
     msg_t curr_msg;
     logic[BOOK_ADDR_WIDTH-1:0] curr_bucket; // hashed bucket index
