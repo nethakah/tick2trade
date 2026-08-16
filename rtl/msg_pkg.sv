@@ -50,6 +50,8 @@ package msg_pkg;
         endcase
     endfunction
 
+    //
+
     typedef struct packed{
         logic[13:0] rsvd;      // reserved for C++ padding
         logic valid;            // slot occupied
@@ -76,6 +78,27 @@ package msg_pkg;
         // NOTE: DO NOT just take the low 12b of order_ref bc NASDAQ assigns refs sequentially which is a problem for bursts of Adds
         
         hash_order_ref = folded[BOOK_ADDR_WIDTH-1:0];
+    endfunction
+
+    //
+
+    typedef struct packed{
+        logic[13:0] rsvd; // word alignment
+        logic valid; // level is occupied
+        logic[15:0] order_count; // num of orders at this level
+        logic[31:0] total_shares; // sum of shares across the orders
+        logic[31:0] price; // price represented by this level
+    } level_t; // 96b with padding
+
+    localparam int LEVEL_ADDR_WIDTH = 8;
+    localparam int NUM_LEVELS = 1 << LEVEL_ADDR_WIDTH;
+
+    function automatic logic[LEVEL_ADDR_WIDTH-1:0] hash_price(
+        input logic[31:0] price
+    );
+        logic[15:0] folded;
+        folded = price[15:0] ^ price[31:16];
+        hash_price = folded[LEVEL_ADDR_WIDTH-1:0];
     endfunction
 
 endpackage
