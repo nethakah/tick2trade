@@ -45,7 +45,8 @@ module order_book
         READ_BUCKET = 3'd1,
         FIND_ORDER = 3'd2, // if A, reads level here nad updates
         READ_LEVEL = 3'd3, // for E/D - read the level after learning the price
-        UPDATE = 3'd4 // modify both L3 and L2
+        UPDATE = 3'd4, // modify both L3 and L2
+        RESCAN = 3'd5 // for when top level fully empties
     } book_state_enum;
     book_state_enum state;
     // ADD (4): IDLE -> READ_BUCKET -> FIND_ORDER -> UPDATE
@@ -70,6 +71,12 @@ module order_book
     // store its price on the level to verify hash landed on right one
     logic level_match;
     assign level_match = level_data.valid && (level_data.price == curr_price);
+
+    // for rescanning when top of book level empties
+    logic[LEVEL_ADDR_WIDTH-1:0] rescan_index;
+    logic rescan_is_buy;
+    logic[31:0] rescan_best_price;
+    logic[31:0] rescan_best_shares;
 
     // THE PARALLEL COMPARES
     logic[ENTRIES_PER_BUCKET-1:0] match_hit; // indices hold whether they are the order we want
@@ -286,8 +293,24 @@ module order_book
                                     else begin
                                         ask_levels[curr_level].valid <= '0;
                                     end
+
+                                    // RESCAN CASE - vanished level was top of book
+                                    if (curr_price == top_bid_price) begin
+                                        if (curr_is_buy) begin
+                                            rescan_is_buy <= 1'b1;
+                                            rescan_best_price <= '0;
+                                        end
+                                        else begin // !curr_is_buy
+                                            rescan_is_buy <= '0;
+                                            rescan_best_price <= 32'hFFFFFFFF;
+                                        end
+                                        rescan_index <= '0;
+                                        rescan_best_shares <= '0;
+                                        state <= RESCAN;
+                                    end
                                 end
                                 else begin
+                                    // level not removed but just reduced by some shares
                                     if (curr_is_buy) begin
                                         bid_levels[curr_level].total_shares <= level_data.total_shares - shares_removed;
                                         
@@ -296,6 +319,11 @@ module order_book
                                         end
                                         else begin
                                             bid_levels[curr_level].order_count <= level_data.order_count;
+                                        end
+
+                                        // if top of book then top share count moves too
+                                        if (curr_price == top_bid_price) begin
+                                            top_bid_shares <= level_data.total_shares - shares_removed;
                                         end
                                     end
 
@@ -307,6 +335,11 @@ module order_book
                                         end
                                         else begin
                                             ask_levels[curr_level].order_count <= level_data.order_count;
+                                        end
+
+                                        // if top of book again top share count moves too
+                                        if (curr_price == top_ask_price) begin
+                                            top_ask_shares <= level_data.total_shares - shares_removed;
                                         end
                                     end
                                end
@@ -321,6 +354,24 @@ module order_book
 
                         default: ;
                     endcase
+                end
+
+                RESCAN: begin
+                    if (scan_is_buy) begin
+                        // bid must be higher to win
+                        if ()
+                    end
+                    else begin
+                        ...
+                    end
+
+                    if (scan_index == LEVEL_ADDR_WIDTH'(NUM_LEVELS-1)) begin // cast to right size
+
+                    end
+
+                    else begin
+                        scan_index <= scan_index + 1'b1;
+                    end
                 end
 
                 default: begin
