@@ -1,3 +1,12 @@
+/* 
+L3 = book memory = every order keyed by ref numbers, hashed to a bucket
+L2 = bid/ask levels = shares split up by price levels derived from L3 so we 
+can find best bid without scanning all the orders per message
+
+Add is 4 cycles (bc carries its price)
+Exc/Del is 5 cycles (bc no price in the message)
+*/
+
 module order_book
     import msg_pkg::*;
 (
@@ -21,6 +30,16 @@ module order_book
     output logic[31:0] miss_count, // executed/del referenced an order not in the book
     output logic [31:0] level_collision_count // 2 prices hashed to same level slot
 );
+    logic[31:0] top_bid_price;
+    logic[31:0] top_bid_shares;
+    logic[31:0] top_ask_price;
+    logic[31:0] top_ask_shares;
+
+    assign best_bid_price = top_bid_price;
+    assign best_bid_shares = top_bid_shares;
+    assign best_ask_price = top_ask_price;
+    assign best_ask_shares = top_ask_shares;
+    
     typedef enum logic[2:0]{
         IDLE = 3'd0,
         READ_BUCKET = 3'd1,
@@ -93,6 +112,11 @@ module order_book
             miss_count <= '0;
             level_collision_count <= '0;
             book_valid <= '0;
+
+            top_bid_shares <= '0;
+            top_ask_shares <= '0;
+            top_bid_price <= '0; // new bids win by being higher so start at 0
+            top_ask_price <= 32'hFFFFFFFF; // new asks win by being lower so we start at max 32b num
         end
         else begin
             book_valid <= '0; // 1cycle pulse
@@ -140,52 +164,158 @@ module order_book
                             shares_removed <= curr_msg.shares;
                             order_left <= '0;
                         end
+                        state <= READ_LEVEL;
+                    end
+                    else begin
+                        // order not in the book or Add was lost in a seq gap
+                        miss_count <= miss_count + 32'd1;
+                        state <= IDLE;
                     end
                 end 
 
+                READ_LEVEL: begin
+                    level_data <= curr_is_buy ? bid_levels[curr_level] : ask_levels[curr_level];
+                    state <= UPDATE;
+                end
+
+                // every msg writes both things in 1 cycle here
                 UPDATE: begin
                     state <= IDLE;
                     case (curr_msg.msg_type)
+
                         MSG_ADD: begin
                             // find free slot in bucket + write order into it
                             // check every slot in parallel
                             if (free_found) begin
+                                // L3 - write the order
                                 book_mem[curr_bucket][free_index].valid <= 1'b1;
                                 book_mem[curr_bucket][free_index].is_buy <= curr_msg.is_buy;
                                 book_mem[curr_bucket][free_index].stock_locate <= curr_msg.stock_locate;
                                 book_mem[curr_bucket][free_index].price <= curr_msg.price;
                                 book_mem[curr_bucket][free_index].shares <= curr_msg.shares;
                                 book_mem[curr_bucket][free_index].order_ref_num <= curr_msg.order_ref_num;
+                            
+                                // L2 - add shares at price
+                                if (level_match) begin // level exists
+                                    if (curr_is_buy) begin
+                                        bid_levels[curr_level].total_shares <= level_data.total_shares + curr_msg.shares;
+                                        bid_levels[curr_level].order_count <= level_data.order_count + 16'd1;
+                                    end
+                                    else begin
+                                        ask_levels[curr_level].total_shares <= level_data.total_shares + curr_msg.shares;
+                                        ask_levels[curr_level].order_count <= level_data.order_count + 16'd1;
+                                    end
+
+                                    book_valid <= 1'b1;
+                                end
+                                else if (!level_data.valid) begin
+                                    // empty slot so create the level
+                                    if (curr_is_buy) begin
+                                        bid_levels[curr_level].price <= curr_msg.price;
+                                        bid_levels[curr_level].total_shares <= curr_msg.shares;
+                                        bid_levels[curr_level].order_count <= 16'd1;
+                                        bid_levels[curr_level].valid <= 1'b1;
+                                    end
+                                    else begin
+                                        ask_levels[curr_level].price <= curr_msg.price;
+                                        ask_levels[curr_level].total_shares <= curr_msg.shares;
+                                        ask_levels[curr_level].order_count <= 16'd1;
+                                        ask_levels[curr_level].valid <= 1'b1;
+                                    end
+
+                                    book_valid <= 1'b1;
+                                end
+                                else begin
+                                    // slot has a different price, so ladder is undersized or hash is cooked
+                                    level_collision_count <= level_collision_count + 32'd1;
+                                end
+
+                                // Top of Book
+                                if (curr_is_buy) begin
+                                    if (curr_msg.price == top_bid_price) begin
+                                        top_bid_shares <= level_data.total_shares + curr_msg.shares;
+                                    end
+                                    else if (curr_msg.price > top_bid_price) begin
+                                        top_bid_price <= curr_msg.price;
+                                        if (level_match) begin
+                                            top_bid_shares <= level_data.total_shares + curr_msg.shares; 
+                                        end
+                                        else begin
+                                            top_bid_shares <= curr_msg.shares; 
+                                        end
+                                    end
+                                end
+
+                                else begin
+                                    if (curr_msg.price == top_ask_price) begin
+                                        top_ask_shares <= level_data.total_shares + curr_msg.shares;
+                                    end
+                                    else if (curr_msg.price < top_ask_price) begin
+                                        top_ask_price <= curr_msg.price;
+                                        if (level_match) begin
+                                            top_ask_shares <= level_data.total_shares + curr_msg.shares;
+                                        end
+                                        else begin
+                                            top_ask_shares <= curr_msg.shares; 
+                                        end
+                                    end
+                                end
                             end
                             else begin
                                 overflow_count <= overflow_count + 32'd1;
                             end
                         end
 
-                        MSG_EXC: begin
-                            // shares filled against an existing order
-                            // subtract them; if fully filled then free the slot
-                            if (match_found) begin
-                                if (curr_msg.shares >= bucket_data[match_index].shares) begin
-                                    book_mem[curr_bucket][match_index].valid <= '0;
-                                end
-                                else begin
-                                    book_mem[curr_bucket][match_index].shares <= 
-                                    bucket_data[match_index].shares - curr_msg.shares;
-                                end
+                        // L2 work identical for both E/D
+                        MSG_DEL, MSG_EXC: begin
+                            // L3
+                            if (!order_left) begin
+                                book_mem[curr_bucket][match_index].shares <= bucket_data[match_index].shares - shares_removed;
                             end
                             else begin
-                                miss_count <= miss_count + 32'd1;
-                            end
-                        end
-
-                        MSG_DEL: begin
-                            // order is cancelled entirely - clear valid
-                            if (match_found) begin
                                 book_mem[curr_bucket][match_index].valid <= '0;
                             end
+
+                            // L2
+                            if (level_match) begin
+                               if (level_data.order_count==16'd1 && order_left) begin
+                               // last order at curr price so level should disappear
+                                    if (curr_is_buy) begin
+                                        bid_levels[curr_level].valid <= '0;
+                                    end
+                                    else begin
+                                        ask_levels[curr_level].valid <= '0;
+                                    end
+                                end
+                                else begin
+                                    if (curr_is_buy) begin
+                                        bid_levels[curr_level].total_shares <= level_data.total_shares - shares_removed;
+                                        
+                                        if (order_left) begin
+                                            bid_levels[curr_level].order_count <= level_data.order_count-16'd1;
+                                        end
+                                        else begin
+                                            bid_levels[curr_level].order_count <= level_data.order_count;
+                                        end
+                                    end
+
+                                    else begin
+                                        ask_levels[curr_level].total_shares <= level_data.total_shares - shares_removed;
+                                        
+                                        if (order_left) begin
+                                            ask_levels[curr_level].order_count <= level_data.order_count-16'd1;
+                                        end
+                                        else begin
+                                            ask_levels[curr_level].order_count <= level_data.order_count;
+                                        end
+                                    end
+                               end
+
+                               book_valid <= 1'b1;
+                            end
                             else begin
-                                miss_count <= miss_count + 32'd1;
+                                // order exists in L3 but the price doesn't have a level
+                                level_collision_count <= level_collision_count + 32'd1;
                             end
                         end
 
@@ -197,7 +327,6 @@ module order_book
                     state <= IDLE;
                 end
             endcase
-
         end
     end
 
