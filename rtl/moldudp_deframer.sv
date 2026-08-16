@@ -44,13 +44,13 @@ module moldudp_deframer
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             state <= READ_SESSION;
-            byte_count <= 4'd0;
-            gap_detected <= 1'b0;
-            gap_count <= 32'd0;
-            packet_count <= 32'd0;
+            byte_count <= '0;
+            gap_detected <= '0;
+            gap_count <= '0;
+            packet_count <= '0;
             first_packet <= 1'b1;
-            m_axis_tvalid <= 1'b0;
-            packet_error <= 1'b0;
+            m_axis_tvalid <= '0;
+            packet_error <= '0;
         end
         else begin
             gap_detected <= 1'b0;
