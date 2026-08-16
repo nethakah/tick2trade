@@ -162,6 +162,18 @@
 - Overflow will be handled by sizing instead of dropping orders since 27Mb of UltraRAM gives us 16,000+ live orders along with tracking an overflow counter as a status reg to make sure it cannot happen.
 - Still deterministic, NOT average. 
 
-### log-31: L3 existence rationale (2026-08-15)
-- With ITCH, 'E' (executed) and 'D' (delete) messages only have order_ref_num and literally no information on stock symbol or price. So we need to look up what order this reference number refers to.
-- The L3 book is the lookup.
+### log-31: Order book structure (2026-08-15)
+- L3 (book memory) holds all orders by reference number.
+- L3 existence rationale: E/D only have a ref_num and no price/signal, so we have to lookup to get that information and apply changes to a price level.
+- L2 (bid and ask levels) holds shares aggregated by price (each price has a level).
+- L2 existence rationale: finding best bid by scanning every order on every message is not feasible, instead we can hash with parallel compare for constant time lookup.
+
+### log-32: Top-of-book max/min (2026-08-16)
+- Bids win by being higher, so top_bid_price resets at 0.
+- Asks win by being lower, so top_ask_price resets at 0xFFFFFFFF (for 32b).
+
+### log-33: Rescanning case (2026-08-16)
+- Adding improves top of book only, so it's 1 comparison.
+- We only track at the top, but when the level at the top of book is emptied then we know the new best will be the highest remaining bid but we don't track that anywhere (its at a hashed position so we can't just go "one level down" or anything like that), so we'd have to do a bounded scan of entries.
+- Obviously tracking 2nd best means we track 3rd best etc. etc. so we can't do that.
+- I considered a sorted structure but then adding is O(n) so that's not possible. So as of now I see no other architectural option than to accept that when a top level fully empties is the only time we are not working in constant O(1) time. And it's always 256 cycles so it's not THAT horrible. I'll update if I find a workaround that is better.
