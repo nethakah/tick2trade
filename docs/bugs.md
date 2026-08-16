@@ -1,4 +1,5 @@
 # Bug Journal
+Linting: `verilator --lint-only -Wall --top-module modulename rtl/msg_pkg.sv rtl/modulename.sv`
 
 ---
 
