@@ -1,4 +1,4 @@
-# tick2trade
+# Tick to Trade
 
 A NASDAQ ITCH 5.0 market data pipeline in SystemVerilog, targeting a Xilinx ZCU104 (Zynq UltraScale+ XCZU7EV-2). Raw MoldUDP64 packets in, order book state and a trading signal out, with deterministic nanosecond latency.
 
