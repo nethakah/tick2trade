@@ -72,15 +72,15 @@ package msg_pkg;
     function automatic logic[BOOK_ADDR_WIDTH-1:0] hash_order_ref(
         input logic[63:0] order_ref
     );
-        logic[BOOK_ADDR_WIDTH-1:0] folded;
+        logic[15:0] folded;
         // use XOR folding to get 64b key into a 12b bucket number (mix all 64 bits)
-        folded = order_ref[BOOK_ADDR_WIDTH-1:0]
-                 ^ order_ref[BOOK_ADDR_WIDTH+15:16]
-                 ^ order_ref[BOOK_ADDR_WIDTH+31:32]
-                 ^ order_ref[BOOK_ADDR_WIDTH+47:48];
+        folded = order_ref[15:0]
+                 ^ order_ref[31:16]
+                 ^ order_ref[47:32]
+                 ^ order_ref[63:48];
         // NOTE: DO NOT just take the low 12b of order_ref bc NASDAQ assigns refs sequentially which is a problem for bursts of Adds
         
-        hash_order_ref = folded;
+        hash_order_ref = folded[BOOK_ADDR_WIDTH-1:0];
     endfunction
 
     //

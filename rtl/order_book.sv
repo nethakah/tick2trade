@@ -357,20 +357,35 @@ module order_book
                 end
 
                 RESCAN: begin
-                    if (scan_is_buy) begin
-                        // bid must be higher to win
-                        if ()
+                    if (rescan_is_buy) begin // higher bid replaces
+                        if (bid_levels[rescan_index].valid && (bid_levels[rescan_index].price > rescan_best_price)) begin
+                            rescan_best_shares <= bid_levels[rescan_index].total_shares;
+                            rescan_best_price <= bid_levels[rescan_index].price;
+                        end
                     end
-                    else begin
-                        ...
+                    else begin // lower ask replaces
+                        if (ask_levels[rescan_index].valid && (ask_levels[rescan_index].price < rescan_best_price)) begin
+                            rescan_best_shares <= ask_levels[rescan_index].total_shares;
+                            rescan_best_price <= ask_levels[rescan_index].price;
+                        end
                     end
 
-                    if (scan_index == LEVEL_ADDR_WIDTH'(NUM_LEVELS-1)) begin // cast to right size
+                    if (rescan_index == LEVEL_ADDR_WIDTH'(NUM_LEVELS-1)) begin // cast to right size
+                        if (rescan_is_buy) begin
+                            top_bid_shares <= rescan_best_shares;
+                            top_bid_price <= rescan_best_price;
+                        end
+                        else begin
+                            top_ask_shares <= rescan_best_shares;
+                            top_ask_price <= rescan_best_price;
+                        end
 
+                        state <= IDLE;
+                        book_valid <= 1'b1;
                     end
 
-                    else begin
-                        scan_index <= scan_index + 1'b1;
+                    else begin // increment scan
+                        rescan_index <= rescan_index + 1'b1;
                     end
                 end
 
