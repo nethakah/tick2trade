@@ -177,3 +177,7 @@
 - We only track at the top, but when the level at the top of book is emptied then we know the new best will be the highest remaining bid but we don't track that anywhere (its at a hashed position so we can't just go "one level down" or anything like that), so we'd have to do a bounded scan of entries.
 - Obviously tracking 2nd best means we track 3rd best etc. etc. so we can't do that.
 - I considered a sorted structure but then adding is O(n) so that's not possible. So as of now I see no other architectural option than to accept that when a top level fully empties is the only time we are not working in constant O(1) time. And it's always 256 cycles so it's not THAT horrible. I'll update if I find a workaround that is better.
+
+### log-34: Hash width (2026-08-17)
+- Originally I narrowed the XOR fold to BOOK_ADDR_WIDTH but it caused a linting problem where 16 bits weren't utilized at all.
+- Instead fold at full 16b width and then afterwards truncate to the address width so we use every bit to generate the result.
