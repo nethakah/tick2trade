@@ -8,7 +8,7 @@ verilator --cc --exe --build -j 0 --top-module order_book rtl/msg_pkg.sv rtl/ord
 #include <verilated.h>
 #include <cstdio>
 #include <cstdint>
-#include "../include/contracts.hpp"
+#include "contracts.hpp"
 
 static int failures = 0;
 static constexpr int RESET_CYCLES = 5;

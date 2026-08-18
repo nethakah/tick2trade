@@ -9,7 +9,7 @@ verilator --cc --exe --build -j 0 --top-module async_fifo rtl/async_fifo.sv tb/f
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
-#include "../include/contracts.hpp"
+#include "contracts.hpp"
 
 static int failures = 0;
 

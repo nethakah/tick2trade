@@ -9,8 +9,8 @@ verilator --cc --exe --build -j 0 --top-module moldudp_deframer rtl/msg_pkg.sv r
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
-#include "../include/contracts.hpp"
-#include "../include/itch_messages.hpp"
+#include "contracts.hpp"
+#include "itch_messages.hpp"
 
 static int failures = 0;
 static constexpr int RESET_CYCLES = 5;

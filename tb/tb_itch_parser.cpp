@@ -9,8 +9,8 @@ verilator --cc --exe --build -j 0 --top-module itch_parser rtl/msg_pkg.sv rtl/sk
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
-#include "../include/contracts.hpp"
-#include "../include/itch_messages.hpp"
+#include "contracts.hpp"
+#include "itch_messages.hpp"
 
 static constexpr int RESET_CYCLES = 5; // constexpr is C++ for eval this at compile time, not run time
 static constexpr int TDATA_WORDS = 12; // 384b = 12 words * 32 bits
