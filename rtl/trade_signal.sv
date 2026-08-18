@@ -1,5 +1,5 @@
 module trade_signal
-    import msg_pkg::*
+    import msg_pkg::*;
 (
     input logic clk,
     input logic rst_n,
@@ -58,16 +58,16 @@ end
 // is there sufficient size (shares) sitting to fill our buy/sell
 logic size_ok;
 always_comb begin
-    if (cfg_size) begin // buy so check what is offered
-        size_ok = (best_ask_shares >= cfg_min_size);
+    if (cfg_side) begin // buy so check what is offered
+        size_ok = (best_ask_shares >= cfg_size_min);
     end 
     else begin // sell so check what is bid for
-        size_ok = (best_bid_shares >= cfg_min_size);
+        size_ok = (best_bid_shares >= cfg_size_min);
     end
 end
 
 // is the market stable enough to trade into (depends on spread)
-logic spread_ok
+logic spread_ok;
 always_comb begin
     if (market_valid) begin
         spread = best_ask_price - best_bid_price;
@@ -76,7 +76,7 @@ always_comb begin
         spread = 32'hFFFFFFFF;
     end 
 
-    spread_ok = (spread <= cfg_max_spread);
+    spread_ok = (spread <= cfg_spread_max);
 end
 
 // check all conditions met
@@ -86,7 +86,7 @@ always_comb begin
         conditions_ok = '0;
     end 
     else begin
-        condiitons_ok = 1'b1;
+        conditions_ok = 1'b1;
     end
 end
 
@@ -157,13 +157,12 @@ end
         @(posedge clk) disable iff (!rst_n)
         order_fire |=> (fire_count == $past(fire_count) + 32'd1)
     )
-    else $error("fire_count didn't increment on order_fire")
+    else $error("fire_count didn't increment on order_fire");
     assert property(
         @(posedge clk) disable iff (!rst_n)
         !order_fire |=> (fire_count == $past(fire_count))
     )
     else $error("fire_count incremented without a fire");
-    
 `endif
 
 endmodule
