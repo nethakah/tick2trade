@@ -115,4 +115,22 @@ always_ff @(posedge clk) begin
     end
 end
 
+// correctness assertions
+`ifdef SIMULATION
+
+    assume property(
+        @(posedge clk) disable iff (!rst_n)
+        order_fire |=> !order_fire)
+        else $error("order_fire held for >1 cycle");
+    assume property(
+        @(posedge_clk) disable iff (!rst_n)
+        order_fire |-> $past(cfg_armed))
+        else $error("order_fire occurred while disarmed");
+    assume property(
+        @(posedge_clk) disable iff (!rst_n)
+        order_fire |-> $past(market_valid))
+        else $error("fired on invalid market");
+    assume 
+`endif
+
 endmodule
