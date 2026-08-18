@@ -17,8 +17,7 @@ static constexpr int TDATA_WORDS = 12; // 384b = 12 words * 32 bits
 
 static int failures = 0;
 
-static void tick(Vitch_parser *dut) // 1 clock cycle
-{
+static void tick(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     //
 
@@ -31,8 +30,7 @@ static void tick(Vitch_parser *dut) // 1 clock cycle
     ENSURES(dut->clk == 1);
 }
 
-static void reset(Vitch_parser *dut)
-{
+static void reset(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     //
     
@@ -86,72 +84,63 @@ match_num (64b) - 63:0
 */
 
 // extract from padding
-static inline uint64_t get_match_num(Vitch_parser *dut) 
-{
+static inline uint64_t get_match_num(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     REQUIRES(dut->m_axis_tvalid);
     //
 
     return ((uint64_t)dut->m_axis_tdata[1] << 32) | dut->m_axis_tdata[0];
 }
-static inline uint32_t get_price(Vitch_parser *dut) 
-{
+static inline uint32_t get_price(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     REQUIRES(dut->m_axis_tvalid);
     //
 
     return dut->m_axis_tdata[2];
 }
-static inline uint64_t get_stock(Vitch_parser *dut) 
-{
+static inline uint64_t get_stock(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     REQUIRES(dut->m_axis_tvalid);
     //
 
     return ((uint64_t)dut->m_axis_tdata[4] << 32) | dut->m_axis_tdata[3];
 }
-static inline uint32_t get_shares(Vitch_parser *dut) 
-{
+static inline uint32_t get_shares(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     REQUIRES(dut->m_axis_tvalid);
     //
 
     return dut->m_axis_tdata[5];
 }
-static inline uint64_t get_order_ref(Vitch_parser *dut) 
-{
+static inline uint64_t get_order_ref(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     REQUIRES(dut->m_axis_tvalid);
     //
 
     return ((uint64_t)dut->m_axis_tdata[7] << 32) | dut->m_axis_tdata[6];
 }
-static inline uint64_t get_timestamp(Vitch_parser *dut) 
-{
+static inline uint64_t get_timestamp(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     REQUIRES(dut->m_axis_tvalid);
     //
 
     return ((uint64_t)dut->m_axis_tdata[9] << 32) | dut->m_axis_tdata[8];
 }
-static inline uint16_t get_locate(Vitch_parser *dut) 
-{
+static inline uint16_t get_locate(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     REQUIRES(dut->m_axis_tvalid);
     //
 
     return (uint16_t)(dut->m_axis_tdata[10] & 0xFFFF);
 }
-static inline uint8_t get_msg_type(Vitch_parser *dut) 
-{
+static inline uint8_t get_msg_type(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     REQUIRES(dut->m_axis_tvalid);
     //
 
     return (uint8_t)(dut->m_axis_tdata[11] & 0xF);
 }
-static inline bool get_is_buy(Vitch_parser *dut) 
-{
+static inline bool get_is_buy(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     REQUIRES(dut->m_axis_tvalid);
     //
@@ -159,7 +148,8 @@ static inline bool get_is_buy(Vitch_parser *dut)
     return (dut->m_axis_tdata[11] >> 4) & 1;
 }
 
-static int push_byte(Vitch_parser* dut, 
+static int push_byte(
+    Vitch_parser* dut, 
     uint8_t b, 
     bool *msg_out = nullptr, 
     int max_wait = 100
@@ -197,7 +187,8 @@ static int push_byte(Vitch_parser* dut,
 
 }
 
-static void feed_byte(Vitch_parser* dut,
+static void feed_byte(
+    Vitch_parser* dut,
     uint8_t b,
     bool *got_msg,
     uint8_t *out_type,
@@ -234,8 +225,7 @@ static void feed_byte(Vitch_parser* dut,
     failures++;
 }
 
-static void send_msg(Vitch_parser* dut, const uint8_t* msg, size_t len)
-{
+static void send_msg(Vitch_parser* dut, const uint8_t* msg, size_t len){
     REQUIRES(dut != nullptr);
     REQUIRES(msg != nullptr);
     REQUIRES(len > 0);
@@ -247,8 +237,7 @@ static void send_msg(Vitch_parser* dut, const uint8_t* msg, size_t len)
     }
 }
 
-static int wait_for_msg(Vitch_parser *dut, int max_cycles = 100)
-{
+static int wait_for_msg(Vitch_parser *dut, int max_cycles = 100){
     REQUIRES(dut != nullptr);
     REQUIRES(dut->rst_n == 1);
     REQUIRES(max_cycles > 0);
@@ -270,8 +259,7 @@ static constexpr uint8_t MSG_ADD  = 1;
 static constexpr uint8_t MSG_EXC  = 2;
 static constexpr uint8_t MSG_DEL  = 3;
 
-static void check(uint64_t actual, uint64_t expected, const char* name)
-{
+static void check(uint64_t actual, uint64_t expected, const char* name){
     REQUIRES(name != nullptr);
     //
     
@@ -282,8 +270,7 @@ static void check(uint64_t actual, uint64_t expected, const char* name)
     }
 }
 
-static void test_add_order(Vitch_parser *dut)
-{
+static void test_add_order(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     //
     
@@ -321,8 +308,7 @@ static void test_add_order(Vitch_parser *dut)
     check(get_price(dut), add.price, "price");
 }
 
-static void test_order_executed(Vitch_parser *dut)
-{
+static void test_order_executed(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     //
     
@@ -356,8 +342,7 @@ static void test_order_executed(Vitch_parser *dut)
     check(get_match_num(dut), exc.match_num, "match_num");
 }
 
-static void test_order_delete(Vitch_parser *dut)
-{
+static void test_order_delete(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     //
 
@@ -387,8 +372,7 @@ static void test_order_delete(Vitch_parser *dut)
     check(get_order_ref(dut), del.order_ref_num, "order_ref_num");
 }
 
-static void test_back2back(Vitch_parser *dut)
-{
+static void test_back2back(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     //
 
@@ -480,8 +464,7 @@ static void test_back2back(Vitch_parser *dut)
     check(captured[2].order_ref, del.order_ref_num, "msg2order_ref");
 }
 
-static void test_backpressure(Vitch_parser *dut)
-{
+static void test_backpressure(Vitch_parser *dut){
     REQUIRES(dut != nullptr);
     //
 
@@ -601,16 +584,13 @@ static void test_backpressure(Vitch_parser *dut)
 
 }
 
-static uint64_t rand_u64(void)
-{
+static uint64_t rand_u64(void){
     return ((uint64_t)rand()<<33) ^ ((uint64_t)rand()<<16) ^ ((uint64_t)rand());
 }
-static uint32_t rand_u32(void)
-{
+static uint32_t rand_u32(void){
     return ((uint32_t)rand()<<16) ^ ((uint32_t)rand());
 }
-static uint16_t rand_u16(void)
-{
+static uint16_t rand_u16(void){
     return ((uint16_t)rand());
 }
 
@@ -625,8 +605,7 @@ struct Expected{
     uint32_t price;
     uint64_t match_num;
 };
-static void test_random_stream(Vitch_parser *dut, int num_msgs, unsigned int seed)
-{
+static void test_random_stream(Vitch_parser *dut, int num_msgs, unsigned int seed){
     REQUIRES(dut != nullptr);
     REQUIRES(num_msgs >= 0);
     //
@@ -766,11 +745,10 @@ static void test_random_stream(Vitch_parser *dut, int num_msgs, unsigned int see
 
     delete[] stream;
     delete[] expected;
-
 }
 
-int main(int argc, char** argv) // (argument count (words typed), argument vector (words themselves))
-{
+int main(int argc, char** argv){
+    // (argument count (words typed), argument vector (words themselves))
     Verilated::commandArgs(argc, argv); // give args to the runtime
     Vitch_parser* dut = new Vitch_parser; // alloc'd (Device-Under-Test)
 
