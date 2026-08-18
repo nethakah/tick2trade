@@ -1,6 +1,6 @@
 /*
 rm -rf obj_dir
-verilator --cc --exe --build -j 0 --top-module order_book rtl/msg_pkg.sv rtl/order_book.sv tb/tb_orderbook.cpp
+verilator --cc --exe --build -j 0  --assert +define+SIM --top-module order_book rtl/msg_pkg.sv rtl/order_book.sv tb/tb_orderbook.cpp
 ./obj_dir/Vorder_book
 */
 
