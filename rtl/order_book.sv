@@ -403,7 +403,7 @@ module order_book
         @(posedge clk) disable iff (!rst_n)
         (best_bid_price != '0 && best_ask_price != 32'hFFFFFFFF) |-> (best_ask_price > best_bid_price)
     )
-    else $error("book published a crossed market ")
+    else $error("book published a crossed market (bid is at or above ask - not possible)")
 
 `endif
 
