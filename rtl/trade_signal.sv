@@ -116,21 +116,54 @@ always_ff @(posedge clk) begin
 end
 
 // correctness assertions
-`ifdef SIMULATION
+`ifdef SIM
 
-    assume property(
+    assume property( // i.e. REQUIRES()
         @(posedge clk) disable iff (!rst_n)
-        order_fire |=> !order_fire)
-        else $error("order_fire held for >1 cycle");
-    assume property(
-        @(posedge_clk) disable iff (!rst_n)
-        order_fire |-> $past(cfg_armed))
-        else $error("order_fire occurred while disarmed");
-    assume property(
-        @(posedge_clk) disable iff (!rst_n)
-        order_fire |-> $past(market_valid))
-        else $error("fired on invalid market");
-    assume 
+        market_valid |-> (best_ask_price > best_bid_price)
+    );
+
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        order_fire |=> !order_fire // if order_fire, then must be !order_fire next cycle
+    )
+    else $error("order_fire held for >1 cycle");
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        order_fire |-> $past(cfg_armed) // if order_fire, then must be armed last cycle
+    )   
+    else $error("order_fire occurred while disarmed");
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        order_fire |-> $past(market_valid) // if order_fire, then must be valid last cycle
+    )
+    else $error("fired on invalid market");
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        order_fire |-> $past(book_valid)
+    )
+    else $error("fired without book update");
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        order_fire |-> (order_shares == $past(cfg_order_shares))
+    )
+    else $error("order size doesn't match preloaded value");
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        order_fire |-> (order_price == $past(cfg_trigger_price))
+    )
+    else $error("order price doesn't match preloaded value");
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        order_fire |=> (fire_count == $past(fire_count) + 32'd1)
+    )
+    else $error("fire_count didn't increment on order_fire")
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        !order_fire |=> (fire_count == $past(fire_count))
+    )
+    else $error("fire_count incremented without a fire");
+    
 `endif
 
 endmodule
