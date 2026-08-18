@@ -17,7 +17,7 @@ static constexpr int TDATA_WORDS = 12; // 384b = 12 words * 32 bits
 
 static int failures = 0;
 
-static void tick(Vitch_parser* dut) // 1 clock cycle
+static void tick(Vitch_parser *dut) // 1 clock cycle
 {
     REQUIRES(dut != nullptr);
     //
@@ -31,7 +31,7 @@ static void tick(Vitch_parser* dut) // 1 clock cycle
     ENSURES(dut->clk == 1);
 }
 
-static void reset(Vitch_parser* dut)
+static void reset(Vitch_parser *dut)
 {
     REQUIRES(dut != nullptr);
     //
