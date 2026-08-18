@@ -294,18 +294,19 @@ module order_book
                                         ask_levels[curr_level].valid <= '0;
                                     end
 
-                                    // RESCAN CASE - vanished level was top of book
-                                    if (curr_price == top_bid_price) begin
-                                        if (curr_is_buy) begin
-                                            rescan_is_buy <= 1'b1;
-                                            rescan_best_price <= '0;
-                                        end
-                                        else begin // !curr_is_buy
-                                            rescan_is_buy <= '0;
-                                            rescan_best_price <= 32'hFFFFFFFF;
-                                        end
+                                    // RESCAN CASE - if the level we're removing was top of book
+                                    if (curr_is_buy && curr_price==top_bid_price) begin
+                                        rescan_is_buy <= 1'b1;
                                         rescan_index <= '0;
                                         rescan_best_shares <= '0;
+                                        rescan_best_price <= '0;
+                                        state <= RESCAN;
+                                    end
+                                    else if (!curr_is_buy && curr_price==top_ask_price) begin
+                                        rescan_is_buy <= '0;
+                                        rescan_index <= '0;
+                                        rescan_best_shares <= '0;
+                                        rescan_best_price <= 32'hFFFFFFFF;
                                         state <= RESCAN;
                                     end
                                 end

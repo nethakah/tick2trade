@@ -61,7 +61,7 @@ static void reset(Vorder_book *dut)
 }
 
 
-static void check(uint64_t actual, uint64_t expected, const char* name){
+static void check(uint64_t actual, uint64_t expected, const char *name){
     REQUIRES(name != nullptr);
     //
     
@@ -70,6 +70,14 @@ static void check(uint64_t actual, uint64_t expected, const char* name){
                     name, (unsigned long long)actual, (unsigned long long)expected);
         failures++;
     }
+}
+
+static Vorder_book *fresh_dut(){
+    Vorder_book *dut = new Vorder_book;
+    reset(dut);
+
+    ENSURES(dut != nullptr);
+    return dut;
 }
 
 // mirrors msg_pkg.sv
@@ -156,27 +164,24 @@ actual tests:
 
 // empty book should give the max/min values for bid/ask
 // need to be able to see no market vs market at price 0
-static void test_reset(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_reset(){
     std::printf("TEST1: empty book resets to max/min val\n");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     check(dut->best_ask_price, ASK_EMPTY, "ask baseline");
     check(dut->best_bid_price, BID_EMPTY, "bid baseline");
     check(dut->miss_count, 0, "miss_count");
     check(dut->overflow_count, 0, "overflow_count");
     check(dut->level_collision_count, 0, "level_collision_count");
+
+    dut->final();
+    delete dut;
 }
 
 // one Add per side (bid/ask are on diff ladders)
-static void test_add_sets_topofbook(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_add_sets_topofbook(){
     std::printf("TEST2: add sets top of book\n");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     push_msg(dut, MSG_ADD, true, 1, 100, 500, 1230000);
     check(dut->best_bid_price, 1230000, "bid price");
@@ -185,16 +190,16 @@ static void test_add_sets_topofbook(Vorder_book *dut){
     check(dut->best_ask_price, 1230500, "ask price");
     check(dut->best_ask_shares, 300, "ask shares");
     check(dut->best_bid_price, 1230000, "ask doesn't affect bid");
+
+    dut->final();
+    delete dut;
 }
 
 
 // adding should only improve topofbook, a worse price should not affect it
-static void test_add_only_improves_topofbook(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_add_only_improves_topofbook(){
     std::printf("TEST3: top of book does not worsen on an Add\n");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     push_msg(dut, MSG_ADD, true, 1, 100, 500, 1230000);
     check(dut->best_bid_price, 1230000, "bid 1");
@@ -204,15 +209,15 @@ static void test_add_only_improves_topofbook(Vorder_book *dut){
     push_msg(dut, MSG_ADD, true, 1, 102, 600, 1231000);
     check(dut->best_bid_price, 1231000, "better bid takes top");
     check(dut->best_bid_shares, 600, "better bid's shares replaces old");
+
+    dut->final();
+    delete dut;
 }
 
 // if we have multiple orders at the same price they should collapse to one L2 level
-static void test_add_aggregates_same_price(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_add_aggregates_same_price(){
     std::printf("TEST4: orders at same price collapse to one L2 level\n");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     push_msg(dut, MSG_ADD, true, 1, 100, 500, 1230000);
     check(dut->best_bid_shares, 500, "1 order");
@@ -221,29 +226,29 @@ static void test_add_aggregates_same_price(Vorder_book *dut){
     check(dut->best_bid_shares, 800, "aggregated the 2 orders in the level");
     push_msg(dut, MSG_ADD, true, 1, 102, 200, 1230000);
     check(dut->best_bid_shares, 1000, "aggregated the 3 orders in the level");
+
+    dut->final();
+    delete dut;
 }
 
 // if execute a partial amount of a level, shares should drop but order and L2 level stay
-static void test_exc_partial_reduces_shares(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_exc_partial_reduces_shares(){
     std::printf("TEST5: partial filling reduces shares\n");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     push_msg(dut, MSG_ADD, true, 1, 100, 500, 1230000);
     push_msg(dut, MSG_EXC, false, 1, 100, 200, 0);
     check(dut->best_bid_price, 1230000, "price survives");
     check(dut->best_bid_shares, 300, "shares reduced by the amount executed");
     check(dut->miss_count, 0, "no misses");
+
+    dut->final();
+    delete dut;
 }
 
-static void test_exc_full_empties_level_and_rescans(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_exc_full_empties_level_and_rescans(){
     std::printf("TEST6: executed full empties the level and causes rescan for top level\n");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     push_msg(dut, MSG_ADD, true, 1, 100, 500, 1230000); // top
     push_msg(dut, MSG_ADD, true, 1, 101, 400, 1229500);
@@ -251,27 +256,27 @@ static void test_exc_full_empties_level_and_rescans(Vorder_book *dut){
     push_msg(dut, MSG_EXC, false, 1, 100, 500, 0); // empties top level
     check(dut->best_bid_price, 1229500, "rescan moved 2nd best up");
     check(dut->best_bid_shares, 400, "2nd best's shares");
+
+    dut->final();
+    delete dut;
 }
 
-static void test_exc_unknown_ref_counts_miss(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_exc_unknown_ref_counts_miss(){
     std::printf("TEST7: executing on unknown order ref causes miss to increment");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     push_msg(dut, MSG_EXC, false, 1, 123, 100, 0);
     check(dut->miss_count, 1, "execute miss counted");
     check(dut->best_bid_price, BID_EMPTY, "book not affected by miss");
+
+    dut->final();
+    delete dut;
 }
 
 // deleting should remove full order, and deleting last order on bid/ask should reset it to baseline
-static void test_del_removes_order_and_rescans(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_del_removes_order_and_rescans(){
     std::printf("TEST8: delete removes full order\n");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     push_msg(dut, MSG_ADD, true, 1, 100, 500, 1230000);
     push_msg(dut, MSG_ADD, true, 1, 101, 400, 1229500);
@@ -280,15 +285,15 @@ static void test_del_removes_order_and_rescans(Vorder_book *dut){
     check(dut->best_bid_shares, 400, "next levels shares");
     push_msg(dut, MSG_DEL, false, 1, 101, 0, 0);
     check(dut->best_bid_price, BID_EMPTY, "empty book gives 0 (baseline for bid)");
+
+    dut->final();
+    delete dut;
 }
 
 // when we delete one of multiple orders at an L2 level, it should not delete the level - like exc
-static void test_del_leaves_level_existing(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_del_leaves_level_existing(){
     std::printf("TEST9: delete leaves L2 level when there are other orders on it\n");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     push_msg(dut, MSG_ADD, true, 1, 100, 500, 1230000);
     push_msg(dut, MSG_ADD, true, 1, 101, 300, 1230000);
@@ -296,26 +301,26 @@ static void test_del_leaves_level_existing(Vorder_book *dut){
     push_msg(dut, MSG_DEL, false, 1, 100, 0, 0);
     check(dut->best_bid_price, 1230000, "L2 level survived delete");
     check(dut->best_bid_shares, 300, "shares reduced and L2 level survived");
+
+    dut->final();
+    delete dut;
 }
 
-static void test_del_unknown_ref_counts_miss(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_del_unknown_ref_counts_miss(){
     std::printf("TEST10: delete on unknow order ref counts as a miss\n");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     push_msg(dut, MSG_DEL, false, 1, 123, 0, 0);
     check(dut->miss_count, 1, "delete miss counted");
     check(dut->best_bid_price, BID_EMPTY, "book not affected by miss");
+
+    dut->final();
+    delete dut;
 }
 
-static void test_lifecycle(Vorder_book *dut){
-    REQUIRES(dut != nullptr);
-    //
-
+static void test_lifecycle(){
     std::printf("TEST11: full book lifecycle\n");
-    reset(dut);
+    Vorder_book *dut = fresh_dut();
 
     push_msg(dut, MSG_ADD, true, 1, 1, 100, 1229000);
     push_msg(dut, MSG_ADD, true, 1, 2, 200, 1229500);
@@ -334,29 +339,27 @@ static void test_lifecycle(Vorder_book *dut){
     check(dut->overflow_count, 0, "no overflowing");
     check(dut->miss_count, 0, "no misses");
     check(dut->level_collision_count, 0, "no L2 level collisions");
+
+    dut->final();
+    delete dut;
 }
 
 int main(int argc, char **argv){
     Verilated::commandArgs(argc, argv);
-    Vorder_book *dut = new Vorder_book;
 
-    test_reset(dut);
-    test_add_sets_topofbook(dut);
-    test_add_only_improves_topofbook(dut);
-    test_add_aggregates_same_price(dut);
-    test_exc_partial_reduces_shares(dut);
-    test_exc_full_empties_level_and_rescans(dut);
-    test_exc_unknown_ref_counts_miss(dut);
-    test_del_removes_order_and_rescans(dut);
-    test_del_leaves_level_existing(dut);
-    test_del_unknown_ref_counts_miss(dut);
-    test_lifecycle(dut);
+    test_reset();
+    test_add_sets_topofbook();
+    test_add_only_improves_topofbook();
+    test_add_aggregates_same_price();
+    test_exc_partial_reduces_shares();
+    test_exc_full_empties_level_and_rescans();
+    test_exc_unknown_ref_counts_miss();
+    test_del_removes_order_and_rescans();
+    test_del_leaves_level_existing();
+    test_del_unknown_ref_counts_miss();
+    test_lifecycle();
 
     std::printf("\n%s (Failures: %d)\n",
                 failures ? "FAILED" : "PASSED", failures);
-    
-    dut->final(); // tells Verilator simulation is over
-    delete dut; // free()
-
     return failures ? 1 : 0;
 }
