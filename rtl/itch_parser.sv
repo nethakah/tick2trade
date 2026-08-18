@@ -178,5 +178,14 @@ module itch_parser
         .m_tready (m_axis_tready)
     );
 
+`ifdef SIM
+
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        (m_axis_tvalid && !m_axis_tready) |=> m_axis_tvalid
+    )
+    else $error("AXI handshake violation (tvalid dropped before we accepted from prev cycle handshake)");
+
+`endif
 
 endmodule
