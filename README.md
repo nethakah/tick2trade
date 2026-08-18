@@ -21,8 +21,8 @@ Every stage boundary is AXI4-Stream, so the ingress source is swappable — a 10
 | `skid_buffer.sv` | Generic 2-slot AXI4-Stream register slice | verified in-context |
 | `moldudp_deframer.sv` | Strips MoldUDP64 framing, detects sequence gaps | verified |
 | `itch_parser.sv` | Decodes Add / Executed / Delete into a parallel field bundle | verified |
-| `order_book.sv` | L3 order table (UltraRAM) + L2 price ladder (BRAM) | next |
-| `signal.sv` | Top-of-book, spread, imbalance | planned |
+| `order_book.sv` | L3 order table (UltraRAM) + L2 price ladder (BRAM) | verified (unrandomized) |
+| `signal.sv` | Top-of-book, spread, imbalance | in progress |
 | `tick2trade_top.sv` | Integration | planned |
 
 ## Why two parsing stages
