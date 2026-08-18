@@ -1,6 +1,6 @@
 /*
 rm -rf obj_dir
-verilator --cc --exe --build -j 0 --top-module moldudp_deframer rtl/msg_pkg.sv rtl/moldudp_deframer.sv tb/deframer/tb_moldudp_deframer.cpp
+verilator --cc --exe --build -j 0 --top-module moldudp_deframer rtl/msg_pkg.sv rtl/moldudp_deframer.sv tb/tb_moldudp_deframer.cpp
 ./obj_dir/Vmoldudp_deframer
 */
 

@@ -1,6 +1,6 @@
 /*
 rm -rf obj_dir
-verilator --cc --exe --build -j 0 --top-module async_fifo rtl/async_fifo.sv tb/fifo/tb_async_fifo.cpp
+verilator --cc --exe --build -j 0 --top-module async_fifo rtl/async_fifo.sv tb/tb_async_fifo.cpp
 ./obj_dir/Vasync_fifo
 */
 

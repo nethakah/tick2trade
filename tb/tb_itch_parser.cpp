@@ -1,6 +1,6 @@
 /*
 rm -rf obj_dir
-verilator --cc --exe --build -j 0 --top-module itch_parser rtl/msg_pkg.sv rtl/skid_buffer.sv rtl/itch_parser.sv tb/parser/tb_itch_parser.cpp
+verilator --cc --exe --build -j 0 --top-module itch_parser rtl/msg_pkg.sv rtl/skid_buffer.sv rtl/itch_parser.sv tb/tb_itch_parser.cpp
 ./obj_dir/Vitch_parser
 */
 
