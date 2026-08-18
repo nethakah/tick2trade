@@ -181,3 +181,10 @@
 ### log-34: Hash width (2026-08-17)
 - Originally I narrowed the XOR fold to BOOK_ADDR_WIDTH but it caused a linting problem where 16 bits weren't utilized at all.
 - Instead fold at full 16b width and then afterwards truncate to the address width so we use every bit to generate the result.
+
+### log-35: Order book verification (2026-08-17)
+- Verified with 11 tests: check reset baselines the price, check add will set top of book if it should, check add cannot worsen the top of book, check adding at the same price aggregates to one L2 level, check executing part of a level reduces shares only, check full execution of a level empties it and runs a rescan if top of book, check executing on unknown reference counts as a miss, check delete removes the order and rescans if top of book, check delete does not remove the level if there's remaining orders, check delete on an unknown reference counts as a miss, check the whole lifecycle.
+- 2 bugs found (bug-07 and bug-08) about ask-side rescan not firing and testbench state leaking between states because memory is not reset in the RTL.
+- Structured these tests by message type (ADD/EXC/DEL).
+- Skipped randomized testing for now for the book, unlike the parser. Since with thousands of random cases I'd need to make a C++ reference model/program to check. Going to move onto the signal engine and then come back to this instead!
+

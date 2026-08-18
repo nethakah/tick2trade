@@ -35,3 +35,14 @@ Linting: `verilator --lint-only -Wall --top-module modulename rtl/msg_pkg.sv rtl
 - Cause: FSM was gated on `if (s_axis_tvalid)`. But from bug-04, we got that `s_axis_tready = !fsm_tvalid` so the parser was telling upstream that its not ready while its own FSM was consuming bytes regardless. The TB failed because it was holding the bytes correctly and re-sending so the FSM was consuming the same type bytes TWICE and the rest of the message was shifting as a result.
 - Fix: `if (s_axis_tvalid && s_axis_tready)` so a transfer happens when both are HI.
 - Notes for me: in this case, seeing ASCII in the numeric field was a clear indicator that the parser was somehow misaligned rather than a bigger error like extracting wrong, so look at boundaries in cases like this.
+
+### bug-07: Ask-side rescan
+- Symptom: Completely lifecycle test (#11) outputted the ask at 1230500 with 400 shares after that level was executed, even though it should've moved to 1231000 with 500 shares. Bid-side tests passed fine.
+- Cause: Rescan checked curr_price == top_bid_price only.
+- Fix: Need symmetric logic for symmetric tests. 
+
+### bug-08: Testbench state leaking
+- Symptom: 16 fails when running TB for the order_book. Test #4 pushed one 500-share order and got 1500, which I noticed was test2's 500 + test3's 500 + test4's 500, which all aggregated into one level but between tests.
+- Cause: memory is not reset in the RTL; reset() asserts on the rst_n port, which clears the FSM and counters and registers for the top of the book, but it DOESN'T CLEAR book_mem or bid_levels or ask_levels (these are not reset in the RTL as per log-12, resetting memory is a waste of area and messes with BRAM inferencing).
+- Fix: use a fresh Vorder_book on every test.
+- Notes for me: not an RTL bug, and I didn't see anything like this in the other testbenches because their states did not survive reset AND get read. Here they do, so that's a problem to be reusing the same "dut" then calling all the test functions on it.
