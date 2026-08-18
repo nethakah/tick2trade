@@ -397,14 +397,23 @@ module order_book
         end
     end
 
-`ifdef SIM
-
-    assert property(
-        @(posedge clk) disable iff (!rst_n)
-        (best_bid_price != '0 && best_ask_price != 32'hFFFFFFFF) |-> (best_ask_price > best_bid_price)
-    )
-    else $error("book published a crossed market (bid is at or above ask - not possible)")
-
-`endif
+    `ifdef SIM
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            (best_bid_price != '0 && best_ask_price != 32'hFFFFFFFF) |-> (best_ask_price > best_bid_price)
+        ) else $error("book published a crossed market (bid is at or above ask - not possible)");
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            !$stable(best_ask_price) |-> $past(book_valid)
+        ) else $error("ask changed w/o book update");
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            !$stable(best_bid_price) |-> $past(book_valid)
+        ) else $error("bid changed w/o book update");
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            miss_count >= $past(miss_count)
+        ) else $error("miss_count decremented somehow");
+    `endif
 
 endmodule

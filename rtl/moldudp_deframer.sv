@@ -159,4 +159,19 @@ module moldudp_deframer
         end
     end
 
+    `ifdef SIM
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            m_axis_tvalid |-> $past(state == PASS_DATA)
+        ) else $error("used a byte outside PASS_DATA");
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            (m_axis_tvalid && !m_axis_tready) |=> m_axis_tvalid
+        ) else $error("AXI error (tvalid dropped before we accepted from prev cycle handshake)");
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            gap_count >= $past(gap_count)
+        ) else $error("gap_count decremented");
+    `endif
+
 endmodule

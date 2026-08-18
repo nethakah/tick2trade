@@ -74,4 +74,16 @@ module skid_buffer #(
         end
     end
 
+    `ifdef SIM
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            (occupancy == SLOTS2) |-> !s_tready
+        ) else $error("accepted input while full");
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            (occupancy == SLOTS0) |-> !m_tvalid
+        ) else $error("offered data while empty");
+    `endif
+
+
 endmodule

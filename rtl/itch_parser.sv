@@ -178,14 +178,23 @@ module itch_parser
         .m_tready (m_axis_tready)
     );
 
-`ifdef SIM
-
-    assert property(
-        @(posedge clk) disable iff (!rst_n)
-        (m_axis_tvalid && !m_axis_tready) |=> m_axis_tvalid
-    )
-    else $error("AXI handshake violation (tvalid dropped before we accepted from prev cycle handshake)");
-
-`endif
+    `ifdef SIM
+        assert property(
+            @(posedge clk) disable iff (!rst_n) // dont check during resets
+            (m_axis_tvalid && !m_axis_tready) |=> m_axis_tvalid
+        ) else $error("AXI error (tvalid dropped before we accepted from prev cycle handshake)");
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            (m_axis_tvalid && !m_axis_tready) |=> $stable(m_axis_tdata) // doesnt change next cycle
+        ) else $error("AXI error (tdata changed while an offer was pending)");
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            (s_axis_tvalid && !s_axis_tready) |=> $stable(byte_index)
+        ) else $error("consumed a byte even though not ready");
+        assert property(
+            @(posedge clk) disable iff (!rst_n)
+            (m_axis_tvalid) |=> (m_axis_tdata.msg_type != MSG_NONE)
+        ) else $error("message with no recognized type");
+    `endif
 
 endmodule

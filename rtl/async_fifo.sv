@@ -130,4 +130,19 @@ module async_fifo #(
     // Check empty: same slot same lap
     assign empty = (r_ptr_gray == w_ptr_gray_q2);
 
+    `ifdef SIM
+        assert property(
+            @(posedge w_clk) disable iff (!w_rst_n)
+            !(full && empty)
+        ) else $error("empty and full at the same time");
+        assert property(
+            @(posedge w_clk) disable iff (!w_rst_n)
+            (full && w_enbl) |-> !do_write
+        ) else $error("wrote while full");
+        assert property(
+            @(posedge r_clk) disable iff (!r_rst_n)
+            (empty && r_enbl) |-> !do_read
+        ) else $error("read while empty");
+    `endif
+
 endmodule
