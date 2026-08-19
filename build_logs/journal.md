@@ -204,3 +204,10 @@
 - Using this in an `ifdef` type thing means we need `--assert +define+SIM` on the verilator build command to check them and include them respectively. 
 - I believe some of these assertions would've caught bug-04, bug-06, and bug-07, and maybe more with some analysis!
 - Did have a few hiccups with the assertions - make sure you write them right or you're going to be wondering whether the testbench or RTL or assertion is wrong, which was not fun (bug-09 but it happened far more times than I logged it).
+
+### log-41: Complete pipeline integrated and verified (2026-08-19)
+- `tick2trade_top.sv` connects everything together finally, barely any logic here of course mostly just wiring.
+- Did 5 integration tests, which all passed.
+- Did both clock domains in the same testbench (instead of a single tick() we conditionally tick the relevant clock).
+- Widened ingress FIFO to 9 bits to include tlast too.
+- FIFO to AXI-Stream is 4 lines and works perfectly thanks to log-16 (r_data is already valid when !empty  which is AXI's requirement precisely).
