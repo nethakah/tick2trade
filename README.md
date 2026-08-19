@@ -7,7 +7,7 @@ A NASDAQ ITCH 5.0 market data pipeline in SystemVerilog, targeting a Xilinx ZCU1
 ## Architecture
 
 ```
-DMA ──▶ async_fifo ──▶ moldudp_deframer ──▶ itch_parser ──▶ order_book ──▶ signal
+DMA ──▶ async_fifo ──▶ moldudp_deframer ──▶ itch_parser ──▶ order_book ──▶ trade_signal
         (CDC)          (strip envelope,     (decode into    (L3 + L2)
                         detect gaps)         msg_t struct)
 ```
@@ -22,8 +22,8 @@ Every stage boundary is AXI4-Stream, so the ingress source is swappable — a 10
 | `moldudp_deframer.sv` | Strips MoldUDP64 framing, detects sequence gaps | verified |
 | `itch_parser.sv` | Decodes Add / Executed / Delete into a parallel field bundle | verified |
 | `order_book.sv` | L3 order table (UltraRAM) + L2 price ladder (BRAM) | verified (unrandomized) |
-| `signal.sv` | Top-of-book, spread, imbalance | in progress |
-| `tick2trade_top.sv` | Integration | planned |
+| `trade_signal.sv` | Top-of-book, spread, imbalance | verified |
+| `tick2trade_top.sv` | Integration | rtl done |
 
 ## Why two parsing stages
 
@@ -52,9 +52,9 @@ rm -rf obj_dir && verilator --cc --exe --build -j 0 \
 
 | Testbench | Coverage |
 | :-- | :-- |
-| `tb/parser/` | A/E/D individually, back-to-back stream, mid-stream backpressure, 100,000 randomized mixed-type messages |
-| `tb/fifo/` | Reset, single-word crossing, fill-to-capacity + drain, 200-cycle pointer wraparound across two coprime clock domains |
-| `tb/deframer/` | Single packet with multiple messages, sequence-gap detection |
+| `tb/tb_itch_parser.cpp` | A/E/D individually, back-to-back stream, mid-stream backpressure, 100,000 randomized mixed-type messages |
+| `tb/tb_async_fifo.cpp` | Reset, single-word crossing, fill-to-capacity + drain, 200-cycle pointer wraparound across two coprime clock domains |
+| `tb/tb_moldudp_deframer.cpp` | Single packet with multiple messages, sequence-gap detection |
 
 Testbenches use 15-122 style `REQUIRES`/`ENSURES` contracts over `assert()`. Stimulus is back-to-back by default — real feeds and DMA never pause between messages, and gapped stimulus hides last-byte/first-byte FSM bugs that otherwise only appear on hardware.
 
