@@ -156,24 +156,41 @@ static void push_packet(
     }
 }
 
+// reset to baselines works
 static void test_reset(){
-    return;
+    std::printf("TEST1: resets to empty book\n");
+    Vtick2trade_top *dut = fresh_dut();
+
+    check(dut->best_bid_price, BID_EMPTY, "bid at baseline");
+    check(dut->best_ask_price, ASK_EMPTY, "ask at baseline");
+    check(dut->packet_count, 0, "packet_count = 0");
+    check(dut->gap_count, 0, "gap_count = 0");
+    check(dut->fire_count, 0, "fire_count = 0");
+    check(dut->miss_count, 0, "miss_count = 0");
+    check(dut->overflow_count, 0, "overflow_count = 0");
+
+    dut->final();
+    delete dut;
 }
 
 static void test_end2end_book(){
-    return;
+    std::printf("TEST2: on raw packet input, order book state outputs accordingly\n")
+    Vtick2trade_top *dut = fresh_dut();
 }
 
 static void test_end2end_fire(){
-    return;
+    std::printf("TEST3: on raw packet input, order fires accordingly\n");
+    Vtick2trade_top *dut = fresh_dut();
 }
 
 static void test_gap_detection(){
-    return;
+    std::printf("TEST4: sequence gap detected from end to end of pipeline\n")
+    Vtick2trade_top *dut = fresh_dut();
 }
 
 static void test_kill_switch(){
-    return;
+    std::printf("TEST5: kill switch blocks fires immediately end to end of pipeline\n")
+    Vtick2trade_top *dut = fresh_dut();
 }
 
 
