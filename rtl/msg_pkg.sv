@@ -108,4 +108,3 @@ package msg_pkg;
     endfunction
 
 endpackage
-
