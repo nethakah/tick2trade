@@ -121,7 +121,7 @@ end
     assume property( // i.e. REQUIRES()
         @(posedge clk) disable iff (!rst_n)
         market_valid |-> (best_ask_price > best_bid_price)
-    );
+    ) else $error("order book has a crossed or locked market (bid >= ask so it should've processed)");
 
     assert property(
         @(posedge clk) disable iff (!rst_n)
@@ -155,12 +155,12 @@ end
     else $error("order price doesn't match preloaded value");
     assert property(
         @(posedge clk) disable iff (!rst_n)
-        order_fire |=> (fire_count == $past(fire_count) + 32'd1)
+        order_fire |-> (fire_count == $past(fire_count) + 32'd1)
     )
     else $error("fire_count didn't increment on order_fire");
     assert property(
         @(posedge clk) disable iff (!rst_n)
-        !order_fire |=> (fire_count == $past(fire_count))
+        (fire_count != $past(fire_count)) |-> order_fire
     )
     else $error("fire_count incremented without a fire");
 `endif
