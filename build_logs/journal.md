@@ -211,3 +211,8 @@
 - Did both clock domains in the same testbench (instead of a single tick() we conditionally tick the relevant clock).
 - Widened ingress FIFO to 9 bits to include tlast too.
 - FIFO to AXI-Stream is 4 lines and works perfectly thanks to log-16 (r_data is already valid when !empty  which is AXI's requirement precisely).
+
+### log-41: Prepping for board (2026-08-19)
+- Starting with loose 10ns constraint
+- Plan: synthesize, read WNS (worst negative slack), compute = target - WNS, tighten, repeat until WNS approaches 0.
+- DMA clock is configurable via PS in Zynq block design so I won't set it beforehand since we don't know what the cores might achieve.
