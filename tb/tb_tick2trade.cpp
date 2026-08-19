@@ -42,8 +42,10 @@ static void tick(Vtick2trade_top *dut){
     if (dma_phase == 0) dut->dma_clk = 1; // rising
     else if (dma_phase == DMA_PERIOD/2) dut->dma_clk = 0; // falling
     if (core_phase == 0) dut->core_clk = 1; // rising
-    else if (core_phase == DMA_PERIOD/2) dut->core_clk = 0; // falling
+    else if (core_phase == CORE_PERIOD/2) dut->core_clk = 0; // falling
     // period/2 because 2 edges per period
+
+    dut->eval();
 }
 
 static bool dma_rising(){
@@ -109,7 +111,7 @@ static void preload(
 }
 
 static void push_byte(
-    Vtick2trade *dut,
+    Vtick2trade_top *dut,
     uint8_t b,
     bool last,
     int max_time = DMA_PERIOD*50
@@ -151,7 +153,7 @@ static void push_packet(
     }
     dut->s_axis_tvalid = 0;
 
-    for int i = 0; i < drain_time; i++){
+    for (int i = 0; i < drain_time; i++){
         tick(dut);
     }
 }
@@ -173,28 +175,188 @@ static void test_reset(){
     delete dut;
 }
 
+// check MoldUDP64 packet with 2 Add orders goes in and book shows both sides
 static void test_end2end_book(){
-    std::printf("TEST2: on raw packet input, order book state outputs accordingly\n")
+    std::printf("TEST2: on raw packet input, order book state outputs accordingly\n");
     Vtick2trade_top *dut = fresh_dut();
+
+    OrderAdd bid;
+    bid.stock_locate  = 1;
+    bid.tracking_num  = 1;
+    bid.timestamp = 1000;
+    bid.order_ref_num = 100;
+    bid.is_buy = true;
+    bid.shares = 500;
+    bid.stock = "AAPL";
+    bid.price = 1230000;
+
+    OrderAdd ask;
+    ask.stock_locate = 1;
+    ask.tracking_num = 2;
+    ask.timestamp = 2000;
+    ask.order_ref_num = 200;
+    ask.is_buy = false;
+    ask.shares = 300;
+    ask.stock = "AAPL";
+    ask.price = 1230500;
+
+    uint8_t itch_bid[ORDER_ADD_LEN];
+    uint8_t itch_ask[ORDER_ADD_LEN];
+    build_order_add(itch_bid, bid);
+    build_order_add(itch_ask, ask);
+
+    uint8_t packet[128];
+    size_t n = 0;
+    build_mold_header(&packet[0], 1000, 2);
+    n = MOLD_HEADER_LEN;
+    n += build_mold_msg(&packet[n], itch_bid, ORDER_ADD_LEN);
+    n += build_mold_msg(&packet[n], itch_ask, ORDER_ADD_LEN);
+
+    push_packet(dut, packet, n);
+    check(dut->best_bid_price, 1230000, "best bid from raw bytes");
+    check(dut->best_ask_price, 1230500, "best ask from raw bytes");
+    check(dut->best_bid_shares, 500, "best bid shares");
+    check(dut->best_ask_shares, 300, "best ask shares");
+    check(dut->packet_count, 1, "packet_count = 1");
+    check(dut->gap_count, 0, "no gaps");
+    check(dut->sequence_num, 1000, "seq num");
+    check(dut->spread, 500, "spread computed");
+    check(dut->miss_count, 0, "no misses");
+    check(dut->overflow_count, 0, "no overflow");
+    check(dut->level_collision_count, 0, "no L2 level collisions");
+
+    dut->final();
+    delete dut;
 }
 
+// check raw packets in one side and fired order on other side
 static void test_end2end_fire(){
     std::printf("TEST3: on raw packet input, order fires accordingly\n");
     Vtick2trade_top *dut = fresh_dut();
+
+    preload(dut, true, true, 1230500, 100, 1000, 50);
+    // buy 100 shares if ask is 123.05 or better
+
+    OrderAdd bid;
+    bid.stock_locate  = 1;
+    bid.tracking_num  = 1;
+    bid.timestamp = 1000;
+    bid.order_ref_num = 100;
+    bid.is_buy = true;
+    bid.shares = 500;
+    bid.stock = "AAPL";
+    bid.price = 1230000;
+
+    OrderAdd ask;
+    ask.stock_locate = 1;
+    ask.tracking_num = 2;
+    ask.timestamp = 2000;
+    ask.order_ref_num = 200;
+    ask.is_buy = false;
+    ask.shares = 300;
+    ask.stock = "AAPL";
+    ask.price = 1230500;
+
+    uint8_t itch_bid[ORDER_ADD_LEN];
+    uint8_t itch_ask[ORDER_ADD_LEN];
+    build_order_add(itch_bid, bid);
+    build_order_add(itch_ask, ask);
+
+    uint8_t packet[128];
+    size_t n = 0;
+    build_mold_header(&packet[0], 1000, 2);
+    n = MOLD_HEADER_LEN;
+    n += build_mold_msg(&packet[n], itch_bid, ORDER_ADD_LEN);
+    n += build_mold_msg(&packet[n], itch_ask, ORDER_ADD_LEN);
+
+    push_packet(dut, packet, n);
+    check(dut->fire_count, 1, "1 fire");
+    check(dut->order_side, 1, "buy side");
+    check(dut->order_price, 1230500, "order has our limit");
+    check(dut->order_shares, 100, "order has preloaded size");
+
+    dut->final();
+    delete dut;
 }
 
+// push 2 packets w sequence jumps
 static void test_gap_detection(){
-    std::printf("TEST4: sequence gap detected from end to end of pipeline\n")
+    std::printf("TEST4: sequence gap detected from end to end of pipeline\n");
     Vtick2trade_top *dut = fresh_dut();
+
+    OrderDelete del;
+    del.stock_locate = 1;
+    del.tracking_num = 1;
+    del.timestamp = 1000;
+    del.order_ref_num = 987;
+
+    uint8_t itch_del[ORDER_DELETE_LEN];
+    build_order_delete(itch_del, del);
+
+    uint64_t seq[2] = {1000, 1005};
+    for (int i = 0; i < 2; i++){
+        uint8_t packet[128];
+        size_t n = 0;
+        build_mold_header(&packet[0], seq[i], 2);
+        n = MOLD_HEADER_LEN;
+        n += build_mold_msg(&packet[n], itch_del, ORDER_DELETE_LEN);
+        n += build_mold_msg(&packet[n], itch_del, ORDER_DELETE_LEN);
+        push_packet(dut, packet, n);
+    }
+
+    check(dut->packet_count, 2, "2 packets");
+    check(dut->gap_count, 3, "1005 - 1002 = 3 messages lost");
+    check(dut->miss_count, 4, "4 misses on unknown orders");
+
+    dut->final();
+    delete dut;
 }
 
 static void test_kill_switch(){
-    std::printf("TEST5: kill switch blocks fires immediately end to end of pipeline\n")
+    std::printf("TEST5: kill switch blocks fires immediately end to end of pipeline\n");
     Vtick2trade_top *dut = fresh_dut();
+
+    preload(dut, false, true, 1230500, 100, 1000, 50); // disarmed
+
+    OrderAdd bid;
+    bid.stock_locate  = 1;
+    bid.tracking_num  = 1;
+    bid.timestamp = 1000;
+    bid.order_ref_num = 100;
+    bid.is_buy = true;
+    bid.shares = 500;
+    bid.stock = "AAPL";
+    bid.price = 1230000;
+
+    OrderAdd ask;
+    ask.stock_locate = 1;
+    ask.tracking_num = 2;
+    ask.timestamp = 2000;
+    ask.order_ref_num = 200;
+    ask.is_buy = false;
+    ask.shares = 300;
+    ask.stock = "AAPL";
+    ask.price = 1230500;
+
+    uint8_t itch_bid[ORDER_ADD_LEN];
+    uint8_t itch_ask[ORDER_ADD_LEN];
+    build_order_add(itch_bid, bid);
+    build_order_add(itch_ask, ask);
+
+    uint8_t packet[128];
+    size_t n = 0;
+    build_mold_header(&packet[0], 1000, 2);
+    n = MOLD_HEADER_LEN;
+    n += build_mold_msg(&packet[n], itch_bid, ORDER_ADD_LEN);
+    n += build_mold_msg(&packet[n], itch_ask, ORDER_ADD_LEN);
+
+    push_packet(dut, packet, n);
+    check(dut->best_ask_price, 1230500, "book updated still");
+    check(dut->fire_count, 0, "nothing fired");
+
+    dut->final();
+    delete dut;
 }
-
-
-
 
 int main(int argc, char **argv){
     Verilated::commandArgs(argc, argv);
