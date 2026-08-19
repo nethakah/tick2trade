@@ -1,11 +1,5 @@
-/* 
-L3 = book memory = every order keyed by ref numbers, hashed to a bucket
-L2 = bid/ask levels = shares split up by price levels derived from L3 so we 
-can find best bid without scanning all the orders per message
-
-Add is 4 cycles (bc carries its price)
-Exc/Del is 5 cycles (bc no price in the message)
-*/
+/* verilator lint_off UNUSEDSIGNAL */
+/* verilator lint_off UNUSEDPARAM */
 
 module order_book
     import msg_pkg::*;

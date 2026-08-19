@@ -1,3 +1,6 @@
+/* verilator lint_off UNUSEDSIGNAL */
+/* verilator lint_off UNUSEDPARAM */
+
 module skid_buffer #(
     parameter int DATA_WIDTH = 32
 )(

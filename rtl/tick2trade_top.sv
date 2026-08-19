@@ -1,3 +1,6 @@
+/* verilator lint_off UNUSEDSIGNAL */
+/* verilator lint_off UNUSEDPARAM */
+
 module tick2trade_top
     import msg_pkg::*;
 (
@@ -75,11 +78,6 @@ module tick2trade_top
     logic[31:0] book_bid_shares;
     logic[31:0] book_ask_shares;
     logic book_valid;
-
-    // fifo to axi-stream adaptor
-    assign deframer_in_tvalid = !fifo_empty;
-    assign deframer_in_tdata = fifo_data;
-    assign fifo_read = deframer_in_tvalid && deframer_in_tready;
 
     /* 
     Async FIFO

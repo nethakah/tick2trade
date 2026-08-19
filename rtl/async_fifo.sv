@@ -1,4 +1,5 @@
-// Needed to wire the core clock and the AXI-DMA clock.
+/* verilator lint_off UNUSEDSIGNAL */
+/* verilator lint_off UNUSEDPARAM */
 
 module async_fifo #(
     parameter int DATA_WIDTH = 8,
