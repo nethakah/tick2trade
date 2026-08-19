@@ -46,3 +46,15 @@ Linting: `verilator --lint-only -Wall --top-module modulename rtl/msg_pkg.sv rtl
 - Cause: memory is not reset in the RTL; reset() asserts on the rst_n port, which clears the FSM and counters and registers for the top of the book, but it DOESN'T CLEAR book_mem or bid_levels or ask_levels (these are not reset in the RTL as per log-12, resetting memory is a waste of area and messes with BRAM inferencing).
 - Fix: use a fresh Vorder_book on every test.
 - Notes for me: not an RTL bug, and I didn't see anything like this in the other testbenches because their states did not survive reset AND get read. Here they do, so that's a problem to be reusing the same "dut" then calling all the test functions on it.
+
+### bug-09: SVA assumed book_valid led price change
+- Symptom: `!$stable(best_bid_price) |-> $past(book_valid)` fired immediately in order book. 
+- Cause: book_valid and top_bid_price assigned on same edge in UPDATE state so they both are visible together, so we don't need to do $past (looks at the cycle before that). 
+- Fix: drop $past.
+- Notes for me: Couple of bugs like this, make sure asserts in SV are correct in terms of timing!!!
+
+### bug-10: Testbench sampled fire pulse 1 cycle late
+- Symptom: In trade_signal tb 7 failures on testing which were that it didn't fire when it should, but TEST9 showed fire_count=1 so RTL was definitely firing.
+- Cause: market_update() ticked twice before evaluating order_fire, so first tick FSM saw book_valid and scheduled order_fire <= 1 but second tick makes it visible AND schedules it back to 0 so by the time we read, the pulse was gone.
+- Fix: eval() instead of tick() on that line, so we recompute outputs without advancing time.
+- Notes for me: you need to sample 1-cycle pulses on the cycle (like bug-05) it's high and you have to read it before the advance on the clock.

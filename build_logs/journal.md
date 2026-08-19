@@ -188,3 +188,19 @@
 - Structured these tests by message type (ADD/EXC/DEL).
 - Skipped randomized testing for now for the book, unlike the parser. Since with thousands of random cases I'd need to make a C++ reference model/program to check. Going to move onto the signal engine and then come back to this instead!
 
+### log-38: trade_signal outline (2026-08-18)
+- Looked into how HFT firms split work between hardware and software, since my instinct was that there's no way their FPGA teams configure actual strategies into fabric.
+- It seems, although the industry is very convulated and mysterious, it does seem that it follows the obvious pattern of software deciding/encoding algorithms and strategies while hardware decides when to fire things. So I modeled this module after that: cfg_* are preloaded order details, which would be configured by the software via AXI-Lite (encoding things into the memory directly so we can access it in the hardware easily).
+- The in-fabric strategy here is just comparators that allow those preloaded values to work as fast as possible. I could be wrong in terms of scope but it was the best I could come up with in terms of getting close to HFT infra.
+- Some things are also gates for pre-trade risk checks, like cfg_size_min for preventing slippage (only firing if we have enough shares to be filled completely), and cfg_spread_max to not trade in a market with an overly large spread, and cfg_armed as a killswitch to stop trading immediately.
+
+### log-39: book_valid gate (2026-08-18)
+- For firing in `trade_signal.sv`, I made the condition `if (book_valid && conditions_ok)`. You could just check the various conditions, but that would emit an order on every single clock cycle, which would be hundreds of millions per second at something like 300 MHz. 
+- Instead, `book_valid` pulses once per market change so we do one order per market event and edge-triggered.
+
+### log-40: SVA on modules (2026-08-18)
+- Once again, thanks to 15-122 at CMU, I decided to incorporate something similar to contracts into the RTL too using `assume` and `assert` statements.
+- Syntax was a bit new to me: `x |-> y` means if x then y on same cycle; `x |=> y` means if x then y on next cycle; `$past(x)` means x one cycle ago; `$stable(x)` means x unchanged since last cycle; `disable iff (!rst_n)` because we don't check during reset (`!` because active HI still remember).
+- Using this in an `ifdef` type thing means we need `--assert +define+SIM` on the verilator build command to check them and include them respectively. 
+- I believe some of these assertions would've caught bug-04, bug-06, and bug-07, and maybe more with some analysis!
+- Did have a few hiccups with the assertions - make sure you write them right or you're going to be wondering whether the testbench or RTL or assertion is wrong, which was not fun (bug-09 but it happened far more times than I logged it).
