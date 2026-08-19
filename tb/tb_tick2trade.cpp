@@ -30,3 +30,17 @@ static void check(uint64_t actual, uint64_t expected, const char *name){
         failures++;
     }
 }
+
+int main(int argc, char **argv){
+    Verilated::commandArgs(argc, argv);
+
+    test_reset();
+    test_end2end_book();
+    test_end2end_fire();
+    test_gap_detection();
+    test_kill_switch();
+
+    std::printf("\n%s (Failures: %d)\n",
+                failures ? "FAILED" : "PASSED", failures);
+    return failures ? 1 : 0;
+}
