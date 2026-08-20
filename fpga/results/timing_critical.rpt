@@ -1,9 +1,9 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 --------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version      : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
-| Date              : Thu Aug 20 18:05:59 2026
+| Date              : Thu Aug 20 18:15:06 2026
 | Host              : ece006.ece.local.cmu.edu running 64-bit Red Hat Enterprise Linux release 8.10 (Ootpa)
-| Command           : report_timing -delay_type max -max_paths 10 -file ./fpga/results/timing_critical.rpt
+| Command           : report_timing -delay_type max -max_paths 10 -nworst 1 -unique_pins -file ./fpga/results/timing_critical.rpt
 | Design            : tick2trade_top
 | Device            : xczu7ev-ffvc1156
 | Speed File        : -2  PRODUCTION 1.30 05-15-2022
