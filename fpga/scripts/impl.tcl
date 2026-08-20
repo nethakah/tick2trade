@@ -22,7 +22,7 @@ route_design
 # the numbers
 report_timing_summary -file $outdir/timing_route.rpt
 report_utilization -file $outdir/utilization_route.rpt
-report_timing -sort_buy group -max_paths 10 -path_type summary -file $outdir/timing_paths.rpt
+report_timing -sort_by group -max_paths 10 -path_type summary -file $outdir/timing_paths.rpt
 
 write_checkpoint -force $outdir/post_route.dcp
 
