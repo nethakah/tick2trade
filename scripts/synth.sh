@@ -1,3 +1,7 @@
+# On ECE Clusters for Vivado:
+# source /afs/ece/support/xilinx/xilinx.release/Vivado-2024.1/Vivado/2024.1/settings64.sh
+# export XILINXD_LICENSE_FILE=2101@xilinx-lic.ece.cmu.edu
+
 set -e
 
 if ! command -v vivado &> /dev/null; then

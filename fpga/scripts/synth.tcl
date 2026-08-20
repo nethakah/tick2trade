@@ -1,7 +1,7 @@
 # set - variables
 set part xczu7ev-ffvc1156-2-e
 set top tick2trade_top
-set outdir ./vivado_out
+set outdir ./fpga/results
 
 file mkdir $outdir
 
@@ -15,7 +15,7 @@ read_verilog -sv rtl/order_book.sv
 read_verilog -sv rtl/trade_signal.sv
 read_verilog -sv rtl/tick2trade_top.sv
 
-read_xdc constraints/tick2trade.xdc
+read_xdc fpga/constraints/tick2trade.xdc
 
 # turn RTL into FPGA primitives
 # out_of_context so we synthesize this module alone with no pin placement or block design
