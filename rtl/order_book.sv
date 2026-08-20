@@ -46,9 +46,9 @@ module order_book
     // ADD (4): IDLE -> READ_BUCKET -> FIND_ORDER -> UPDATE
     // E/D (5): IDLE -> READ_BUCKET -> FIND_ORDER -> READ_LEVEL -> UPDATE
 
-    (* ram_style = "block" *) logic[BUCKET_BITS-1:0] book_mem[NUM_BUCKETS]; // L3 table - 1 read for whole bucket
-    (* ram_style = "block" *) logic[LEVEL_BITS-1:0] bid_levels[NUM_LEVELS]; // L2 bids
-    (* ram_style = "block" *) logic[LEVEL_BITS-1:0] ask_levels[NUM_LEVELS]; // L2 asks
+    logic[BUCKET_BITS-1:0] book_mem[NUM_BUCKETS]; // L3 table - 1 read for whole bucket
+    logic[LEVEL_BITS-1:0] bid_levels[NUM_LEVELS]; // L2 bids
+    logic[LEVEL_BITS-1:0] ask_levels[NUM_LEVELS]; // L2 asks
 
     msg_t curr_msg;
     logic[BOOK_ADDR_WIDTH-1:0] curr_bucket; // hashed bucket index
@@ -75,6 +75,13 @@ module order_book
     logic rescan_is_buy;
     logic[31:0] rescan_best_price;
     logic[31:0] rescan_best_shares;
+
+    // scratch wire for the rescan comparison (since we cannot cast and field select like level_t'(x).field)
+    level_t rescan_level;
+    always_comb begin
+        if (rescan_is_buy) rescan_level = level_t'(bid_levels[rescan_index]);
+        else rescan_level = level_t'(ask_levels[rescan_index]);
+    end
 
     // THE PARALLEL COMPARES
     logic[ENTRIES_PER_BUCKET-1:0] match_hit; // indices hold whether they are the order we want
@@ -158,8 +165,7 @@ module order_book
         end
     end
 
-    level_t rescan_level;
-    logic rescan_pending;
+
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             state <= IDLE;
@@ -172,8 +178,6 @@ module order_book
             top_ask_shares <= '0;
             top_bid_price <= '0; // new bids win by being higher so start at 0
             top_ask_price <= 32'hFFFFFFFF; // new asks win by being lower so we start at max 32b num
-        
-            rescan_pending <= '0;
         end
         else begin
             book_valid <= '0; // 1cycle pulse
@@ -189,7 +193,6 @@ module order_book
 
                 READ_BUCKET: begin
                     // sync read (address applied this cycle, data gets to bucket_data at next edge)
-                    // causes inferred BRAM/URAM instead of LUTRAM
                     bucket_data <= bucket_t'(book_mem[curr_bucket]);
                     state <= FIND_ORDER;
                 end
@@ -329,7 +332,6 @@ module order_book
                                         rescan_best_shares <= '0;
                                         rescan_best_price <= '0;
                                         state <= RESCAN;
-                                        rescan_pending <= '0; 
                                     end
                                     else if (!curr_is_buy && curr_price==top_ask_price) begin
                                         rescan_is_buy <= '0;
@@ -337,7 +339,6 @@ module order_book
                                         rescan_best_shares <= '0;
                                         rescan_best_price <= 32'hFFFFFFFF;
                                         state <= RESCAN;
-                                        rescan_pending <= '0;
                                     end
                                 end
                                 else begin
@@ -363,28 +364,20 @@ module order_book
                 end
 
                 RESCAN: begin
-                    if (rescan_is_buy) begin
-                        rescan_level <= level_t'(bid_levels[rescan_index]);
-                    end
-                    else begin
-                        rescan_level <= level_t'(ask_levels[rescan_index]);
-                    end
-                    if (rescan_pending) begin
-                        if (rescan_is_buy) begin // higher bid replaces
-                            if (rescan_level.valid && (rescan_level.price > rescan_best_price)) begin
-                                rescan_best_shares <= rescan_level.total_shares;
-                                rescan_best_price <= rescan_level.price;
-                            end
+                    if (rescan_is_buy) begin // higher bid replaces
+                        if (rescan_level.valid && (rescan_level.price > rescan_best_price)) begin
+                            rescan_best_shares <= rescan_level.total_shares;
+                            rescan_best_price <= rescan_level.price;
                         end
-                        else begin // lower ask replaces
-                            if (rescan_level.valid && (rescan_level.price < rescan_best_price)) begin
-                                rescan_best_shares <= rescan_level.total_shares;
-                                rescan_best_price <= rescan_level.price;
-                            end
+                    end
+                    else begin // lower ask replaces
+                        if (rescan_level.valid && (rescan_level.price < rescan_best_price)) begin
+                            rescan_best_shares <= rescan_level.total_shares;
+                            rescan_best_price <= rescan_level.price;
                         end
                     end
 
-                    if (rescan_index == LEVEL_ADDR_WIDTH'(NUM_LEVELS-1) && rescan_pending) begin // cast to right size
+                    if (rescan_index == LEVEL_ADDR_WIDTH'(NUM_LEVELS-1)) begin // cast to right size
                         if (rescan_is_buy) begin
                             top_bid_shares <= rescan_best_shares;
                             top_bid_price <= rescan_best_price;
@@ -400,7 +393,6 @@ module order_book
 
                     else begin // increment scan
                         rescan_index <= rescan_index + 1'b1;
-                        rescan_pending <= 1'b1;
                     end
                 end
 
