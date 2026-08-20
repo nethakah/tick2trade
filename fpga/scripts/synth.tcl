@@ -3,7 +3,10 @@ set part xczu7ev-ffvc1156-2-e
 set top tick2trade_top
 set outdir ./fpga/results
 
+# results
 file mkdir $outdir
+# delete prev reports so crashed runs dont leave stale results
+file delete -force {*}[glob -nocomplain $outdir/*.rpt]
 
 # read_verilog - load packages, rtl, constraints
 read_verilog -sv rtl/msg_pkg.sv
@@ -24,7 +27,7 @@ synth_design -top $top \
              -mode out_of_context
 
 # how much of the chip this uses
-# make sure the L3 table shows up as distributed RAM instead of BRAM
+# L3 table should map to distributed LUTRAM
 # -hierarchical to break it down per module
 report_utilization -file $outdir/utilization.rpt
 report_utilization -hierarchical -file $outdir/utilization_hier.rpt
