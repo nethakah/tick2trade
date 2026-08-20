@@ -46,9 +46,9 @@ module order_book
     // ADD (4): IDLE -> READ_BUCKET -> FIND_ORDER -> UPDATE
     // E/D (5): IDLE -> READ_BUCKET -> FIND_ORDER -> READ_LEVEL -> UPDATE
 
-    bucket_t book_mem[NUM_BUCKETS]; // L3 table - 1 read for whole bucket
-    level_t bid_levels[NUM_LEVELS]; // L2 bids
-    level_t ask_levels[NUM_LEVELS]; // L2 asks
+    (* ram_style = "block" *) bucket_t book_mem[NUM_BUCKETS]; // L3 table - 1 read for whole bucket
+    (* ram_style = "block" *) level_t bid_levels[NUM_LEVELS]; // L2 bids
+    (* ram_style = "block" *) level_t ask_levels[NUM_LEVELS]; // L2 asks
 
     msg_t curr_msg;
     logic[BOOK_ADDR_WIDTH-1:0] curr_bucket; // hashed bucket index
