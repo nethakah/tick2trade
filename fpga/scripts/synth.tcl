@@ -35,6 +35,7 @@ report_utilization -hierarchical -file $outdir/utilization_hier.rpt
 # whether clk constraint was met
 # WNS = margin on tightest path (pos = there's headroom, neg = cannot run this fast)
 report_timing_summary -file $outdir/timing_synth.rpt
+report_timing -delay_type max -max_paths 10 -file $outdir/timing_critical.rpt
 
 # says whether order book's arrays inferred as BRAM or URAM or fell to LUTs
 report_ram_utilization -file $outdir/ram.rpt
