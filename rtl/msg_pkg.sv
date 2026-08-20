@@ -66,7 +66,7 @@ package msg_pkg;
     } order_entry_t; // 160b with padding (so every field starts on 32-bit boundary)
     
     localparam int ENTRIES_PER_BUCKET = 4; // each bucket has this many entries in 1 memory word (parallel compared)
-    localparam int BOOK_ADDR_WIDTH = 12; // 4096 buckets
+    localparam int BOOK_ADDR_WIDTH = 10; // 1024 buckets
     localparam int NUM_BUCKETS = 1 << BOOK_ADDR_WIDTH;
     localparam int BOOK_CAP = NUM_BUCKETS * ENTRIES_PER_BUCKET; // 16384 live orders
 
