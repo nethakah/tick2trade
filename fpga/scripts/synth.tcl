@@ -42,4 +42,4 @@ report_ram_utilization -file $outdir/ram.rpt
 # saved snapshot on synthesized design
 write_checkpoint -force $outdir/post_synth.dcp
 
-puts "SYNTHESIS COMPLETE; reports saved to $outdir"
+puts "(!) Synthesis Complete; reports saved to $outdir"
