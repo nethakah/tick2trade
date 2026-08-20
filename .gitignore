@@ -3,6 +3,7 @@
 obj_dir/
 *.vcd
 *.fst
+vivado_out/
 .Xil/
 *.jou
 *.log
@@ -10,5 +11,7 @@ obj_dir/
 *.runs/
 *.sim/
 *.gen/
+*.str
+*.dcp
 *.hw/
 __MACOSX/
