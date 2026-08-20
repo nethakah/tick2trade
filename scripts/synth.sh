@@ -10,7 +10,7 @@ if ! command -v vivado &> /dev/null; then
 fi
 
 vivado -mode batch \
-        -source fpga/scripts/synth.tcl \
+       -source fpga/scripts/synth.tcl \
        -log fpga/results/vivado_synth.log \
        -journal fpga/results/vivado_synth.jou
 
