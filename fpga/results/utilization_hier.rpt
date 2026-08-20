@@ -1,0 +1,35 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
+| Date         : Thu Aug 20 15:32:59 2026
+| Host         : ece006.ece.local.cmu.edu running 64-bit Red Hat Enterprise Linux release 8.10 (Ootpa)
+| Command      : report_utilization -hierarchical -file ./fpga/results/utilization_hier.rpt
+| Design       : tick2trade_top
+| Device       : xczu7ev-ffvc1156-2-e
+| Speed File   : -2
+| Design State : Synthesized
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++----------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+|    Instance    |      Module      | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | URAM | DSP Blocks |
++----------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+| tick2trade_top |            (top) |      20112 |       3592 |   16520 |    0 | 2572 |      0 |      0 |    0 |          0 |
+|   u_book       |       order_book |      19714 |       3202 |   16512 |    0 | 1784 |      0 |      0 |    0 |          0 |
+|   u_deframer   | moldudp_deframer |        184 |        184 |       0 |    0 |  245 |      0 |      0 |    0 |          0 |
+|   u_fifo       |       async_fifo |         27 |         19 |       8 |    0 |   38 |      0 |      0 |    0 |          0 |
+|   u_parser     |      itch_parser |        168 |        168 |       0 |    0 |  407 |      0 |      0 |    0 |          0 |
+|     (u_parser) |      itch_parser |         30 |         30 |       0 |    0 |  142 |      0 |      0 |    0 |          0 |
+|     sb         |      skid_buffer |        138 |        138 |       0 |    0 |  265 |      0 |      0 |    0 |          0 |
+|   u_signal     |     trade_signal |         19 |         19 |       0 |    0 |   98 |      0 |      0 |    0 |          0 |
++----------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+
+

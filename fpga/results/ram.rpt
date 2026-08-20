@@ -1,0 +1,36 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
+| Date         : Thu Aug 20 15:33:42 2026
+| Host         : ece006.ece.local.cmu.edu running 64-bit Red Hat Enterprise Linux release 8.10 (Ootpa)
+| Command      : report_ram_utilization -file ./fpga/results/ram.rpt
+| Design       : tick2trade_top
+| Device       : xczu7ev-ffvc1156-2-e
+| Speed File   : -2
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+RAM Usage Information
+
+Table of Contents
+-----------------
+1. Summary
+
+1. Summary
+----------
+
++--------------------------+------------+-----------+-------+-----------+
+| Memory Type              | Total Used | Available | Util% | Inferred% |
++--------------------------+------------+-----------+-------+-----------+
+| URAM                     |          0 |        96 |  0.00 |      0.00 |
+| BlockRAM                 |          0 |       312 |  0.00 |      0.00 |
+| LUTMs as Distributed RAM |      16520 |    101760 | 16.23 |    100.00 |
+|  LUTMs as RAM64M8        |       2816 |           |       |    100.00 |
+|  LUTMs as RAM512X1S      |       8320 |           |       |    100.00 |
+|  LUTMs as RAM32M16       |          8 |           |       |    100.00 |
+|  LUTMs as RAM256X1D      |       5376 |           |       |    100.00 |
++--------------------------+------------+-----------+-------+-----------+
+*  Each RAMB18 is calculated as 0.5 BlockRAM
+**  Tables 2, 3, 4 and 5 cover RAMs inferred by Vivado Synthesis using XPMs or RTL inference
+***  XRAMs are not reported for detailed tables
+
+
