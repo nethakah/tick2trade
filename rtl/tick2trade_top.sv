@@ -25,6 +25,7 @@ module tick2trade_top
     input logic[31:0] cfg_order_shares,
     input logic[31:0] cfg_spread_max,
     input logic[31:0] cfg_size_min,
+    input logic[15:0] cfg_stock_locate,
 
     // fired/loaded order
     output logic order_fire,
@@ -171,6 +172,7 @@ module tick2trade_top
         .rst_n(core_rst_n),
 
         // in (decoded msgs from parser)
+        .cfg_stock_locate(cfg_stock_locate),
         .s_axis_tdata(parser_tdata),
         .s_axis_tvalid(parser_tvalid),
         // out (backpressure to parser)

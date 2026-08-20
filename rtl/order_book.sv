@@ -12,6 +12,9 @@ module order_book
     input logic s_axis_tvalid,
     output logic s_axis_tready,
 
+    // which symbol this book tracks - written by software over axi4-lite
+    input logic[15:0] cfg_stock_locate,
+
     // top of book (updated when a msg changes it)
     output logic[31:0] best_bid_price,
     output logic[31:0] best_bid_shares,
@@ -184,7 +187,7 @@ module order_book
 
             case (state)
                 IDLE: begin
-                    if (s_axis_tvalid && s_axis_tready) begin
+                    if (s_axis_tvalid && s_axis_tready && (s_axis_tdata.stock_locate==cfg_stock_locate)) begin
                         curr_msg <= s_axis_tdata;
                         curr_bucket <= hash_order_ref(s_axis_tdata.order_ref_num);
                         state <= READ_BUCKET;

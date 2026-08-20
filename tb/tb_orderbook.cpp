@@ -43,6 +43,7 @@ static void reset(Vorder_book *dut)
     
     dut->rst_n = 0;
     dut->s_axis_tvalid = 0;
+    dut->cfg_stock_locate = 1; // all tests use stock_locate=1 here
 
     for (int i = 0; i < TDATA_WORDS; i++){
         dut->s_axis_tdata[i] = 0;

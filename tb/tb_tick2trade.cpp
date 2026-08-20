@@ -69,6 +69,7 @@ static void reset(Vtick2trade_top *dut){
     dut->cfg_order_shares = 0;
     dut->cfg_spread_max = 0;
     dut->cfg_size_min = 0;
+    dut->cfg_stock_locate = 1; // all tests use stock_locate=1 here
     
     for (int i = 0; i < RESET_UNITS; i++){
         tick(dut);
