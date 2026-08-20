@@ -21,3 +21,7 @@ grep -A5 "Design Timing Summary" fpga/results/timing_synth.rpt | head -20
 echo ""
 echo "*** Utilization ***"
 grep -E "CLB LUTs|CLB Registers|Block RAM Tile|URAM|DSPs" fpga/results/utilization.rpt | head -10
+
+echo ""
+echo "*** Critical Path ***"
+grep -E "^Slack|^  Source:|^  Destination:|Data Path Delay|Logic Levels" fpga/results/timing_critical.rpt | head -8
