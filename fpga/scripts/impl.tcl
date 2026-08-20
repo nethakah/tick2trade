@@ -12,7 +12,6 @@ report_utilization -file $outdir/utilization_opt.rpt
 # place_design - assign cells to physical site
 place_design
 report_timing_summary -file $outdir/timing_place.rpt
-report_timing -delay_type max -max_paths 10 -nworst 1 -unique_pins -file $outdir/timing_route_critical.rpt
 
 # phys_opt_design - physical optimization via real placement info
 phys_opt_design
@@ -24,6 +23,7 @@ route_design
 report_timing_summary -file $outdir/timing_route.rpt
 report_utilization -file $outdir/utilization_route.rpt
 report_timing -sort_by group -max_paths 10 -path_type summary -file $outdir/timing_paths.rpt
+report_timing -delay_type max -max_paths 10 -nworst 1 -unique_pins -file $outdir/timing_route_critical.rpt
 
 write_checkpoint -force $outdir/post_route.dcp
 

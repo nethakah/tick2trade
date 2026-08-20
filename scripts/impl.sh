@@ -18,8 +18,8 @@ vivado -mode batch \
        -journal fpga/results/vivado_impl.jou
 
 echo ""
-echo "*** Post-Route Timing ***"
-grep -A5 "Design Timing Summary" fpga/results/timing_route.rpt | head -20
+echo "*** Post-Route Critical Path ***"
+grep -E "^Slack|^  Source:|^  Destination:|Data Path Delay|Logic Levels" fpga/results/timing_route_critical.rpt | head -5
 
 echo ""
 echo "*** Post-Route Utilization ***"
