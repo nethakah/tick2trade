@@ -158,17 +158,8 @@ module order_book
         end
     end
 
-
-    // cannot select a field like level_t'(x).field, so just set the casted values beforehand
     level_t rescan_level;
-    always_comb begin
-        if (rescan_is_buy) begin
-            rescan_level = level_t'(bid_levels[rescan_index]);
-        end
-        else begin
-            rescan_level = level_t'(ask_levels[rescan_index]);
-        end
-    end
+    logic rescan_pending;
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             state <= IDLE;
@@ -181,6 +172,8 @@ module order_book
             top_ask_shares <= '0;
             top_bid_price <= '0; // new bids win by being higher so start at 0
             top_ask_price <= 32'hFFFFFFFF; // new asks win by being lower so we start at max 32b num
+        
+            rescan_pending <= '0;
         end
         else begin
             book_valid <= '0; // 1cycle pulse
@@ -336,6 +329,7 @@ module order_book
                                         rescan_best_shares <= '0;
                                         rescan_best_price <= '0;
                                         state <= RESCAN;
+                                        rescan_pending <= '0; 
                                     end
                                     else if (!curr_is_buy && curr_price==top_ask_price) begin
                                         rescan_is_buy <= '0;
@@ -343,6 +337,7 @@ module order_book
                                         rescan_best_shares <= '0;
                                         rescan_best_price <= 32'hFFFFFFFF;
                                         state <= RESCAN;
+                                        rescan_pending <= '0;
                                     end
                                 end
                                 else begin
@@ -368,20 +363,28 @@ module order_book
                 end
 
                 RESCAN: begin
-                    if (rescan_is_buy) begin // higher bid replaces
-                        if (rescan_level.valid && (rescan_level.price > rescan_best_price)) begin
-                            rescan_best_shares <= rescan_level.total_shares;
-                            rescan_best_price <= rescan_level.price;
-                        end
+                    if (rescan_is_buy) begin
+                        rescan_level <= level_t'(bid_levels[rescan_index]);
                     end
-                    else begin // lower ask replaces
-                        if (rescan_level.valid && (rescan_level.price < rescan_best_price)) begin
-                            rescan_best_shares <= rescan_level.total_shares;
-                            rescan_best_price <= rescan_level.price;
+                    else begin
+                        rescan_level <= level_t'(ask_levels[rescan_index]);
+                    end
+                    if (rescan_pending) begin
+                        if (rescan_is_buy) begin // higher bid replaces
+                            if (rescan_level.valid && (rescan_level.price > rescan_best_price)) begin
+                                rescan_best_shares <= rescan_level.total_shares;
+                                rescan_best_price <= rescan_level.price;
+                            end
+                        end
+                        else begin // lower ask replaces
+                            if (rescan_level.valid && (rescan_level.price < rescan_best_price)) begin
+                                rescan_best_shares <= rescan_level.total_shares;
+                                rescan_best_price <= rescan_level.price;
+                            end
                         end
                     end
 
-                    if (rescan_index == LEVEL_ADDR_WIDTH'(NUM_LEVELS-1)) begin // cast to right size
+                    if (rescan_index == LEVEL_ADDR_WIDTH'(NUM_LEVELS-1) && rescan_pending) begin // cast to right size
                         if (rescan_is_buy) begin
                             top_bid_shares <= rescan_best_shares;
                             top_bid_price <= rescan_best_price;
@@ -397,6 +400,7 @@ module order_book
 
                     else begin // increment scan
                         rescan_index <= rescan_index + 1'b1;
+                        rescan_pending <= 1'b1;
                     end
                 end
 
