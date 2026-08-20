@@ -96,7 +96,7 @@ package msg_pkg;
         logic[31:0] price; // price represented by this level
     } level_t; // 96b with padding
 
-    localparam int LEVEL_ADDR_WIDTH = 8;
+    localparam int LEVEL_ADDR_WIDTH = 10;
     localparam int NUM_LEVELS = 1 << LEVEL_ADDR_WIDTH;
 
     function automatic logic[LEVEL_ADDR_WIDTH-1:0] hash_price(
@@ -106,5 +106,9 @@ package msg_pkg;
         folded = price[15:0] ^ price[31:16];
         hash_price = folded[LEVEL_ADDR_WIDTH-1:0];
     endfunction
+
+    // flat widths for mem declarations because Vivado RAM interface needs plain `logic[W-1:0] mem[DEPTH]` look
+    localparam int BUCKET_BITS = $bits(bucket_t); // 640b
+    localparam int LEVEL_BITS = $bits(level_t); // 96b
 
 endpackage

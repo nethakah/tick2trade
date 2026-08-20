@@ -216,3 +216,10 @@
 - Starting with loose 10ns constraint
 - Plan: synthesize, read WNS (worst negative slack), compute = target - WNS, tighten, repeat until WNS approaches 0.
 - DMA clock is configurable via PS in Zynq block design so I won't set it beforehand since we don't know what the cores might achieve.
+
+### log-42: Synthesis failures (2026-08-19)
+- book_mem at BOOK_ADDR_WIDTH=12 gives us 4096*4*160 = 2621440 bits. The elboration limit in Vivado 2024.2 for a single varaible is 1mil. 
+- Big thing here is that it's actually not a capacity problem, since 2.6Mb against the 27Mb of URAM is fine, but it's a limit on how big a variable the tool can model before deciding what becomes RAM.
+- Originally chose 12 with operational reasoning (related to log-30), but didn't take into account future tool limits. 
+- Dropped this to BOOK_ADDR_WIDTH=10, so 1024*4 = 4096 live orders, which is under the limit. 
+- The better fix would be to restructure the packed bucket into an unpacked outer dimension so we can have the full size originally scoped.
