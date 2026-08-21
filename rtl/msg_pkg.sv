@@ -68,7 +68,7 @@ package msg_pkg;
     localparam int ENTRIES_PER_BUCKET = 4; // each bucket has this many entries in 1 memory word (parallel compared)
     localparam int BOOK_ADDR_WIDTH = 10; // 1024 buckets
     localparam int NUM_BUCKETS = 1 << BOOK_ADDR_WIDTH;
-    localparam int BOOK_CAP = NUM_BUCKETS * ENTRIES_PER_BUCKET; // 16384 live orders
+    localparam int BOOK_CAP = NUM_BUCKETS * ENTRIES_PER_BUCKET; // 4096 live orders
 
     typedef order_entry_t[ENTRIES_PER_BUCKET-1:0] bucket_t; // 640b per bucket
 
