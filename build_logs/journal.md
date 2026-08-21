@@ -212,54 +212,54 @@
 - Widened ingress FIFO to 9 bits to include tlast too.
 - FIFO to AXI-Stream is 4 lines and works perfectly thanks to log-16 (r_data is already valid when !empty  which is AXI's requirement precisely).
 
-### log-41: Prepping for board (2026-08-19)
+### log-42: Prepping for board (2026-08-19)
 - Starting with loose 10ns constraint
 - Plan: synthesize, read WNS (worst negative slack), compute = target - WNS, tighten, repeat until WNS approaches 0.
 - DMA clock is configurable via PS in Zynq block design so I won't set it beforehand since we don't know what the cores might achieve.
 
-### log-42: Synthesis failures (2026-08-19)
+### log-43: Synthesis failures (2026-08-19)
 - book_mem at BOOK_ADDR_WIDTH=12 gives us 4096*4*160 = 2621440 bits. The elboration limit in Vivado 2024.2 for a single varaible is 1mil. 
 - Big thing here is that it's actually not a capacity problem, since 2.6Mb against the 27Mb of URAM is fine, but it's a limit on how big a variable the tool can model before deciding what becomes RAM.
 - Originally chose 12 with operational reasoning (related to log-30), but didn't take into account future tool limits. 
 - Dropped this to BOOK_ADDR_WIDTH=10, so 1024*4 = 4096 live orders, which is under the limit. 
 - The better fix would be to restructure the packed bucket into an unpacked outer dimension so we can have the full size originally scoped.
 
-### log-43: Struct arrays won't infer as RAM (2026-08-20)
+### log-44: Struct arrays won't infer as RAM (2026-08-20)
 - Vivado built the L3 table of FFs and muxes which made synthesis so long.
 - Tried `ram_style = "block"` but it was ignored due to "incorrect usage", which was the result of decomposing the packed array into per-field objects instead of memory words.
 - Fixed it by making flat bit vector `logic[BUCKET_BITS-1:0] book_mem[NUM_BUCKETS]` and casting at the boundary `bucket_t'()`. The field access in the FSM is the same but the declaration just changed a bit to make Vivado agree. 
 - Also realized I can't field-select off a cast (i.e. writing `level_t'(x).valid`).
 
-### log-44: BRAM and URAM are 72b wide (2026-08-20)
-- Inference worked from log-43 fix but BRAM still refused by Vivado.
+### log-45: BRAM and URAM are 72b wide (2026-08-20)
+- Inference worked from log-44 fix but BRAM still refused by Vivado.
 - The bucket is 640 bits as is at this point, yet BRAM and URAM are natively 72 bits per port so there's a mismatch here.
 - Unfortunately not fixable without changing the infra a lot here - 640b width is literally the design I picked since I want all 4 entries read in one access and compared in parallel, while narrowing it to fit would mean 4 sequential reads per lookup.
 - Hence, log-6 is wrong. I was reasoning about capacity when the constraint now is port width, so I'm just accepting LUTRAM (especially since it's only 8.7% of the device), and after trying to research a bit more into this convulated space I do think real HFT matches that anyway - using LUTRAM for wide single-cycle access and BRAM for bulk state which we don't really have to worry about.
 
-### log-45: L2 ladder collision feedback (2026-08-20)
+### log-46: L2 ladder collision feedback (2026-08-20)
 - L3 buckets hold 4 entries so hash collisions have 3 fallbacks before things are lost.
 - L2 has 1 slot per hash index so if a price hashes to a slot holding a different price then we never create that level and it's only tracked by level_collision_count.
 - I didn't notice the asymmetry here, that 1 collision in L2 loses a price level while 4 before L3 loses an order.
 - Mitigated this by sizing, moving LEVEL_ADDR_WIDTH to 10 instead of 8 so we now have 1024 slots, so a few dozen live levels occupy ~4% and collisions are even less likely.
 
-### log-46: Symbol filtering (2026-08-20)
+### log-47: Symbol filtering (2026-08-20)
 - We carreid stock_locate but never read it really.
 - Two symbols (e.g. AAPL and MSFT) could have orders sharing the same hash table and ladders.
 - To fix this I added cfg_stock_locate as input and made it so IDLE state only accepts matching messages. Hence, the order book is officially built to manage ONE ticker/company. Costed only 20 more LUTs.
 - For multi-symbol structure, we'd need to index every part of this by stock_locate, and even at 100 symbols thats already 64Mb. In real production or if I had more budget or something, these orderbooks would be across devices/FPGAs.
 
-### log-47: Timing out-of-context synthesis (2026-08-20)
+### log-48: Timing out-of-context synthesis (2026-08-20)
 - `report_timing_summary` via tcl scripts returned an empty table! `check_timing` explained it though, Vivado won't summarize a design that is mostly uncosntrained I/O which was inherent here since every port connects to other logic rather than a pin for now. Just use `report_timing` for synthesizing.
 - Also needed to have HD.CLK_SRC since OOC has no clocker buffer so no clock delay model to look at to make timings make sense.
 - Small thing that messed with me was that `set_property` with an invalid site name fails but SILENTLY. Make sure you check the correct real sites from `get_sites -filter {SITE_TYPE =~ *BUFG*}`.
 
-### log-48: 294MHz post-route (2026-08-20)
+### log-49: 294MHz post-route (2026-08-20)
 - 10ns (+7.377) to 3ns post-synth met (..) to 3ns post_route violated (-0.336) to 3.4ns post-route met (+0.012).
 - Post-synth said 381MHz and post-route said 294MHz. Post-route is the honest number.
 - Critical path moved between stages.
 - Final: 19914 LUTs (8.64%), 2615 FF (0.57%), 0 BRAM/URAM/DSP.
 
-### log-49: Relaxing constraint made timing worse (2026-08-20)
+### log-50: Relaxing constraint made timing worse (2026-08-20)
 - 3.4ns: met +0.012, path 3.300ns, 10 levels, 68% routing.
 - 3.5ns: violated -0.102, path 3.414ns, 3 levels, 93% routing.
 - I think a looser target makes the placer stop optimizing early so cells land further apart in the end. Went back to 3.4ns in the constraint.
