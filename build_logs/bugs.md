@@ -58,3 +58,8 @@ Linting: `verilator --lint-only -Wall --top-module modulename rtl/msg_pkg.sv rtl
 - Cause: market_update() ticked twice before evaluating order_fire, so first tick FSM saw book_valid and scheduled order_fire <= 1 but second tick makes it visible AND schedules it back to 0 so by the time we read, the pulse was gone.
 - Fix: eval() instead of tick() on that line, so we recompute outputs without advancing time.
 - Notes for me: you need to sample 1-cycle pulses on the cycle (like bug-05) it's high and you have to read it before the advance on the clock.
+
+### bug-11: set_property fails silently on bad site name
+- Symptom: added HD.CLK_SRC to fix empty timing summary.
+- Cause: Didn't check for real sites on this device; vivado accepted a nonexistent one and ran normally.
+- Fix: real sites findable via `get_sites -filter {SITE_TYPE =~ *BUFG*}`.
