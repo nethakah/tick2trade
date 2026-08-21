@@ -1,13 +1,13 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 ---------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
-| Date         : Thu Aug 20 23:16:07 2026
+| Date         : Thu Aug 20 23:18:07 2026
 | Host         : ece006.ece.local.cmu.edu running 64-bit Red Hat Enterprise Linux release 8.10 (Ootpa)
-| Command      : report_utilization -file ./fpga/results/utilization.rpt
+| Command      : report_utilization -file ./fpga/results/utilization_opt.rpt
 | Design       : tick2trade_top
 | Device       : xczu7ev-ffvc1156-2-e
 | Speed File   : -2
-| Design State : Synthesized
+| Design State : Optimized
 ---------------------------------------------------------------------------------------------------------------------------------------------
 
 Utilization Design Information
@@ -32,8 +32,8 @@ Table of Contents
 +----------------------------+-------+-------+------------+-----------+-------+
 |          Site Type         |  Used | Fixed | Prohibited | Available | Util% |
 +----------------------------+-------+-------+------------+-----------+-------+
-| CLB LUTs*                  | 20136 |     0 |          0 |    230400 |  8.74 |
-|   LUT as Logic             |  3616 |     0 |          0 |    230400 |  1.57 |
+| CLB LUTs*                  | 20134 |     0 |          0 |    230400 |  8.74 |
+|   LUT as Logic             |  3614 |     0 |          0 |    230400 |  1.57 |
 |   LUT as Memory            | 16520 |     0 |          0 |    101760 | 16.23 |
 |     LUT as Distributed RAM | 16520 |     0 |            |           |       |
 |     LUT as Shift Register  |     0 |     0 |            |           |       |
@@ -173,7 +173,7 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 | CARRY8   |   95 |                 CLB |
 | FDSE     |   67 |            Register |
 | RAMD32   |   14 |                 CLB |
-| LUT1     |    7 |                 CLB |
+| LUT1     |    5 |                 CLB |
 | RAMS32   |    2 |                 CLB |
 +----------+------+---------------------+
 

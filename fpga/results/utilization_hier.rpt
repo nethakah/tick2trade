@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 ---------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
-| Date         : Thu Aug 20 18:14:28 2026
+| Date         : Thu Aug 20 23:16:07 2026
 | Host         : ece006.ece.local.cmu.edu running 64-bit Red Hat Enterprise Linux release 8.10 (Ootpa)
 | Command      : report_utilization -hierarchical -file ./fpga/results/utilization_hier.rpt
 | Design       : tick2trade_top
@@ -22,8 +22,8 @@ Table of Contents
 +----------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
 |    Instance    |      Module      | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | URAM | DSP Blocks |
 +----------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
-| tick2trade_top |            (top) |      20139 |       3619 |   16520 |    0 | 2617 |      0 |      0 |    0 |          0 |
-|   u_book       |       order_book |      19715 |       3203 |   16512 |    0 | 1781 |      0 |      0 |    0 |          0 |
+| tick2trade_top |            (top) |      20136 |       3616 |   16520 |    0 | 2617 |      0 |      0 |    0 |          0 |
+|   u_book       |       order_book |      19712 |       3200 |   16512 |    0 | 1781 |      0 |      0 |    0 |          0 |
 |   u_deframer   | moldudp_deframer |        184 |        184 |       0 |    0 |  245 |      0 |      0 |    0 |          0 |
 |   u_fifo       |       async_fifo |         27 |         19 |       8 |    0 |   38 |      0 |      0 |    0 |          0 |
 |   u_parser     |      itch_parser |        194 |        194 |       0 |    0 |  455 |      0 |      0 |    0 |          0 |
