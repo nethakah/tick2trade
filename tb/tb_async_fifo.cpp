@@ -271,6 +271,9 @@ static void test_wraparound(Vasync_fifo *dut){
 
     //ALTERNATE
     for (int c = 0; c < CYCLES; c++){
+        INVARIANT(next_read <= next_write);
+        INVARIANT(next_write - next_read <= (uint32_t)DEPTH);
+
         int waited = 0;
         while (dut->empty && waited < R_PERIOD*10){
             step(dut);

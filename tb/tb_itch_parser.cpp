@@ -621,6 +621,8 @@ static void test_random_stream(Vitch_parser *dut, int num_msgs, unsigned int see
     size_t stream_len = 0;
 
     for (int i = 0; i < num_msgs; i++){
+        INVARIANT(stream_len <= (size_t)num_msgs * ORDER_ADD_LEN);
+        
         int which = rand() % 3; 
         // 0=add, 1=exc; 2=del
 

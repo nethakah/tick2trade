@@ -10,5 +10,7 @@
     assert((condition) && "POST-CONDITION")
 #define ASSERT(condition) \
     assert((condition) && "ASSERTION")
+#define INVARIANT(condition) \
+    assert((condition) && "LOOP-INVARIANT")
 
 #endif // CONTRACTS_HPP
