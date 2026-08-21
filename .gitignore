@@ -15,3 +15,6 @@ vivado_out/
 *.dcp
 *.hw/
 __MACOSX/
+clockInfo.txt
+*CongestedCLBsAndNets.txt
+tight_setup_hold_pins.txt
