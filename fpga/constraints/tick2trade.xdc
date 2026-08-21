@@ -1,5 +1,5 @@
 # tighten/loosen to find what design achieves (+ add some margin)
-create_clock -period 3.500 -name core_clk [get_ports core_clk]
+create_clock -period 3.400 -name core_clk [get_ports core_clk]
 # 10ns (100MHz) placeholder for synthesis (DMA clk comes from PS's AXI-HP interface)
 create_clock -period 10.000 -name dma_clk [get_ports dma_clk]
 
