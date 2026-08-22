@@ -18,15 +18,6 @@ module tick2trade_top
     input logic core_clk,
     input logic core_rst_n,
 
-    // configurables (software writes this over axi4-lite)
-    input logic cfg_armed,
-    input logic cfg_side,
-    input logic[31:0] cfg_trigger_price,
-    input logic[31:0] cfg_order_shares,
-    input logic[31:0] cfg_spread_max,
-    input logic[31:0] cfg_size_min,
-    input logic[15:0] cfg_stock_locate,
-
     // fired/loaded order
     output logic order_fire,
     output logic order_side,
@@ -51,6 +42,15 @@ module tick2trade_top
 );
     localparam int INGRESS_WIDTH = 9; // 8 tdata + 1 tlast
     localparam int INGRESS_DEPTH = 16; // enough depth for CDC not buffering (log-17)
+
+    // csr to pipeline
+    logic cfg_armed;
+    logic cfg_side;
+    logic[31:0] cfg_trigger_price;
+    logic[31:0] cfg_order_shares;
+    logic[15:0] cfg_stock_locate;
+    logic[31:0] cfg_spread_max;
+    logic[31:0] cfg_size_min;
 
     // fifo to deframer (core_clk domain)
     logic[INGRESS_WIDTH-1:0] fifo_data;
@@ -79,6 +79,57 @@ module tick2trade_top
     logic[31:0] book_bid_shares;
     logic[31:0] book_ask_shares;
     logic book_valid;
+
+    /*
+    AXI4-lite ctrl/status registers for software to write/read
+    */
+    tick2trade_csr u_csr(
+        .clk(core_clk),
+        .rst_n(core_rst_n),
+
+        // in (from PS)
+        .s_axi_awaddr(s_axi_awaddr),
+        .s_axi_awvalid(s_axi_awvalid),
+        .s_axi_wdata(s_axi_wdata),
+        .s_axi_wstrb(s_axi_wstrb),
+        .s_axi_wvalid(s_axi_wvalid),
+        .s_axi_bready(s_axi_bready),
+        .s_axi_araddr(s_axi_araddr),
+        .s_axi_arvalid(s_axi_arvalid),
+        .s_axi_rready(s_axi_rready),
+
+        // out (to PS)
+        .s_axi_awready(s_axi_awready),
+        .s_axi_wready(s_axi_wready),
+        .s_axi_bresp(s_axi_bresp),
+        .s_axi_bvalid(s_axi_bvalid),
+        .s_axi_arready(s_axi_arready),
+        .s_axi_rdata(s_axi_rdata),
+        .s_axi_rresp(s_axi_rresp),
+        .s_axi_rvalid(s_axi_rvalid),
+
+        // out (cfg to pipeline)
+        .cfg_armed(cfg_armed),
+        .cfg_side(cfg_side),
+        .cfg_trigger_price(cfg_trigger_price),
+        .cfg_order_shares(cfg_order_shares),
+        .cfg_spread_max(cfg_spread_max),
+        .cfg_size_min(cfg_size_min),
+        .cfg_stock_locate(cfg_stock_locate),
+
+        // in (status signals from pipeline)
+        .best_bid_price(book_bid_price),
+        .best_bid_shares(book_bid_shares),
+        .best_ask_price(book_ask_price),
+        .best_ask_shares(book_ask_shares),
+        .spread(spread),
+        .fire_count(fire_count),
+        .packet_count(packet_count),
+        .gap_count(gap_count),
+        .miss_count(miss_count),
+        .overflow_count(overflow_count),
+        .level_collision_count(level_collision_count)
+    );
 
     /* 
     Async FIFO
@@ -166,7 +217,6 @@ module tick2trade_top
     /*
     Order book
     */
-
     order_book u_book(
         .clk(core_clk),
         .rst_n(core_rst_n),
