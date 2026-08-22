@@ -1,6 +1,6 @@
 /*
 rm -rf obj_dir
-verilator --cc --exe --build -j 0 --assert +define+SIM --top-module tick2trade_top rtl/msg_pkg.sv rtl/skid_buffer.sv rtl/async_fifo.sv rtl/moldudp_deframer.sv rtl/itch_parser.sv rtl/order_book.sv rtl/trade_signal.sv rtl/tick2trade_top.sv tb/tb_tick2trade.cpp
+verilator --cc --exe --build -j 0 --assert +define+SIM --top-module tick2trade_top rtl/msg_pkg.sv rtl/skid_buffer.sv rtl/async_fifo.sv rtl/moldudp_deframer.sv rtl/itch_parser.sv rtl/order_book.sv rtl/trade_signal.sv rtl/tick2trade_csr.sv rtl/tick2trade_top.sv tb/tb_tick2trade_top.cpp
 ./obj_dir/Vtick2trade_top
 */
 
@@ -17,6 +17,12 @@ static constexpr int CORE_PERIOD = 13;
 static constexpr int RESET_UNITS = DMA_PERIOD * 5; // scale off slower clk
 static constexpr uint32_t BID_EMPTY = 0;
 static constexpr uint32_t ASK_EMPTY = 0xFFFFFFFF;
+static constexpr uint32_t REG_CONTROL = 0x00;
+static constexpr uint32_t REG_TRIGGER_PRICE = 0x04;
+static constexpr uint32_t REG_ORDER_SHARES = 0x08;
+static constexpr uint32_t REG_SPREAD_MAX = 0x0C;
+static constexpr uint32_t REG_SIZE_MIN = 0x10;
+static constexpr uint32_t REG_STOCK_LOCATE = 0x14;
 
 static uint64_t sim_time = 0;
 
@@ -51,6 +57,9 @@ static void tick(Vtick2trade_top *dut){
 static bool dma_rising(){
     return (sim_time % DMA_PERIOD) == 0;
 }
+static bool core_rising(){
+    return (sim_time % CORE_PERIOD) == 0;
+}
 
 static void reset(Vtick2trade_top *dut){
     REQUIRES(dut != nullptr);
@@ -63,13 +72,13 @@ static void reset(Vtick2trade_top *dut){
     dut->s_axis_tdata = 0;
     dut->s_axis_tvalid = 0;
     dut->s_axis_tlast = 0;
-    dut->cfg_armed = 0;
-    dut->cfg_side = 0;
-    dut->cfg_trigger_price = 0;
-    dut->cfg_order_shares = 0;
-    dut->cfg_spread_max = 0;
-    dut->cfg_size_min = 0;
-    dut->cfg_stock_locate = 1; // all tests use stock_locate=1 here
+    
+    dut->s_axi_awvalid = 0;
+    dut->s_axi_wvalid = 0;
+    dut->s_axi_bready = 0;
+    dut->s_axi_arvalid = 0;
+    dut->s_axi_rready = 0;
+    dut->s_axi_wstrb = 0xF;
     
     for (int i = 0; i < RESET_UNITS; i++){
         tick(dut);
@@ -91,6 +100,59 @@ static Vtick2trade_top *fresh_dut(){
     return dut;
 }
 
+static void axi_write(
+    Vtick2trade_top *dut,
+    uint32_t addr,
+    uint32_t data,
+    int max_time = CORE_PERIOD*100
+){
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->core_rst_n==1);
+    //
+
+    dut->s_axi_awaddr = addr & 0xFF;
+    dut->s_axi_awvalid = 1;
+    dut->s_axi_wdata = data;
+    dut->s_axi_wstrb = 0xF;
+    dut->s_axi_wvalid = 1;
+    dut->s_axi_bready = 1;
+
+    bool aw_done = false;
+    bool w_done = false;
+    bool b_done = false;
+
+    for (int i = 0; i < max_time; i++){
+        if (core_rising()){
+            if (!aw_done && dut->s_axi_awready){
+                aw_done = true;
+            }
+            if (!w_done && dut->s_axi_wready){
+                w_done = true;
+            }
+            if (dut->s_axi_bvalid){
+                b_done = true;
+            }
+        }
+        tick(dut);
+
+        if (aw_done) dut->s_axi_awvalid = 0;
+        if (w_done) dut->s_axi_wvalid = 0;
+        if (b_done) break;
+    }
+    dut->s_axi_awvalid = 0;
+    dut->s_axi_wvalid = 0;
+
+    for (int i = 0; i < CORE_PERIOD*2; i++){
+        tick(dut);
+    }
+    dut->s_axi_bready = 0;
+    
+    if (!b_done){
+        std::printf("FAILED: tried to write to CSR (0x%02x) but never got a response\n", addr);
+        failures++;
+    }
+}
+
 static void preload(
     Vtick2trade_top *dut,
     bool armed,
@@ -103,12 +165,12 @@ static void preload(
     REQUIRES(dut != nullptr);
     //
 
-    dut->cfg_armed = armed ? 1 : 0;
-    dut->cfg_side = side ? 1 : 0;
-    dut->cfg_trigger_price = trigger_price;
-    dut->cfg_order_shares = order_shares;
-    dut->cfg_spread_max = spread_max;
-    dut->cfg_size_min = size_min;
+    axi_write(dut, REG_STOCK_LOCATE, 1);
+    axi_write(dut, REG_TRIGGER_PRICE, trigger_price);
+    axi_write(dut, REG_ORDER_SHARES, order_shares);
+    axi_write(dut, REG_SPREAD_MAX, spread_max);
+    axi_write(dut, REG_SIZE_MIN, size_min);
+    axi_write(dut, REG_CONTROL, (armed? 0x1 : 0x0) | (side? 0x2 : 0x0));
 }
 
 static void push_byte(
@@ -180,6 +242,7 @@ static void test_reset(){
 static void test_end2end_book(){
     std::printf("TEST2: on raw packet input, order book state outputs accordingly\n");
     Vtick2trade_top *dut = fresh_dut();
+    axi_write(dut, REG_STOCK_LOCATE, 1);
 
     OrderAdd bid;
     bid.stock_locate  = 1;
@@ -284,6 +347,7 @@ static void test_end2end_fire(){
 static void test_gap_detection(){
     std::printf("TEST4: sequence gap detected from end to end of pipeline\n");
     Vtick2trade_top *dut = fresh_dut();
+    axi_write(dut, REG_STOCK_LOCATE, 1);
 
     OrderDelete del;
     del.stock_locate = 1;
