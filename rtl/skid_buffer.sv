@@ -91,3 +91,4 @@ module skid_buffer #(
 
 
 endmodule
+`default_nettype wire

@@ -148,3 +148,4 @@ module async_fifo #(
     `endif
 
 endmodule
+`default_nettype wire

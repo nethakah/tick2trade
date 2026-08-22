@@ -427,3 +427,4 @@ module order_book
     `endif
 
 endmodule
+`default_nettype wire

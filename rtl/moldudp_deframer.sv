@@ -179,3 +179,4 @@ module moldudp_deframer
     `endif
 
 endmodule
+`default_nettype wire

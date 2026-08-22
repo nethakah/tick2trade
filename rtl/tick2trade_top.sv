@@ -304,3 +304,4 @@ module tick2trade_top
         .fire_count(fire_count)
     );
 endmodule
+`default_nettype wire

@@ -170,3 +170,4 @@ end
 `endif
 
 endmodule
+`default_nettype wire

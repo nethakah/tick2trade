@@ -261,5 +261,4 @@ module tick2trade_csr #(
 `endif
 
 endmodule
-
 `default_nettype wire

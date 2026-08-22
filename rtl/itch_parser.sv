@@ -202,3 +202,4 @@ module itch_parser
     `endif
 
 endmodule
+`default_nettype wire

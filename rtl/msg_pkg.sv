@@ -113,3 +113,4 @@ package msg_pkg;
     localparam int LEVEL_BITS = $bits(level_t); // 96b
 
 endpackage
+`default_nettype wire
