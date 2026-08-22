@@ -1,5 +1,6 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
+`default_nettype none
 
 module skid_buffer #(
     parameter int DATA_WIDTH = 32

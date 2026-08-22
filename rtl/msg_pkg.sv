@@ -1,5 +1,6 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
+`default_nettype none
 
 package msg_pkg;
 

@@ -1,5 +1,6 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
+`default_nettype none
 
 module moldudp_deframer
     import msg_pkg::*;
