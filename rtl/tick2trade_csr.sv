@@ -17,7 +17,7 @@ module tick2trade_csr #(
 
     // W - Write data channel
     input logic[31:0] s_axi_wdata,
-    input logic[3:0] s_axi_wstrb,
+    input logic[3:0] s_axi_wstrb, // 1 bit per byte of the 32b wdata - byte enable (write the byte if bit=1)
     input logic s_axi_wvalid,
     output logic s_axi_wready,
 

@@ -60,7 +60,7 @@ static void reset(Vtick2trade_csr *dut){
     dut->spread = 0;
     dut->fire_count = 0;
     dut->packet_count = 0;
-    dit->miss_count = 0;
+    dut->miss_count = 0;
     dut->overflow_count = 0;
     dut->level_collision_count = 0;
     dut->gap_count = 0;
@@ -122,6 +122,9 @@ static void axi_write(
         }
         if (!aw_done && dut->s_axi_awready){
             aw_done = true;
+        }
+        if (dut->s_axi_bvalid){
+            b_done = true;
         }
         tick(dut);
 
@@ -186,36 +189,163 @@ static uint32_t axi_read(
 static void test_reset_safe(){
     std::printf("TEST1: config should reset disarmed\n");
     Vtick2trade_csr *dut = fresh_dut();
+
+    check(dut->cfg_armed, 0, "cfg_armed low at reset");
+    check(dut->cfg_side, 0, "cfg_side");
+    check(dut->cfg_trigger_price, 0, "cfg_trigger_price");
+    check(dut->cfg_order_shares, 0, "cfg_order_shares");
+    check(dut->cfg_stock_locate, 0, "cfg_stock_locate");
+
+    //
+    dut->final();
+    delete dut;
 }
 
+// make sure write lands on corresponding cfg_* port
 static void test_write_drives_cfg(){
-    std::printf("TEST1: config should reset disarmed\n");
+    std::printf("TEST2: writes should drive cfg_* outputs\n");
     Vtick2trade_csr *dut = fresh_dut();
+
+    axi_write(dut, REG_TRIGGER_PRICE, 1230500);
+    check(dut->cfg_trigger_price, 1230500, "cfg_trigger_price");
+    axi_write(dut, REG_ORDER_SHARES, 100);
+    check(dut->cfg_order_shares, 100, "cfg_order_shares");
+    axi_write(dut, REG_STOCK_LOCATE, 0x98761234);
+    check(dut->cfg_stock_locate, 0x1234, "cfg_stock_locate cut to 16b");
+    axi_write(dut, REG_SPREAD_MAX, 1000);
+    check(dut->cfg_spread_max, 1000, "cfg_spread_max");
+    axi_write(dut, REG_SIZE_MIN, 50);
+    check(dut->cfg_size_min, 50, "cfg_size_min");
+
+    //
+    dut->final();
+    delete dut;
 }
 
+// check ctrl's 2 flags work - bit 0 is armed and bit 1 is the side
 static void test_ctrl_bits(){
-    std::printf("TEST1: config should reset disarmed\n");
+    std::printf("TEST3: ctrl register flags are packed together properly\n");
     Vtick2trade_csr *dut = fresh_dut();
+
+    axi_write(dut, REG_CONTROL, 0x1);
+    check(dut->cfg_side, 0, "sell");
+    check(dut->cfg_armed, 1, "armed");
+    axi_write(dut, REG_CONTROL, 0x3);
+    check(dut->cfg_side, 1, "buy");
+    check(dut->cfg_armed, 1, "armed");
+    axi_write(dut, REG_CONTROL, 0x0);
+    check(dut->cfg_armed, 0, "unarmed");
+
+    //
+    dut->final();
+    delete dut;
 }
 
 static void test_readback(){
-    std::printf("TEST1: config should reset disarmed\n");
+    std::printf("TEST4: cfg regs read back fine\n");
     Vtick2trade_csr *dut = fresh_dut();
+
+    axi_write(dut, REG_TRIGGER_PRICE, 1230500);
+    check(axi_read(dut, REG_TRIGGER_PRICE), 1230500, "read back trigger_price");
+    axi_write(dut, REG_ORDER_SHARES, 100);
+    check(axi_read(dut, REG_ORDER_SHARES), 100, "read back of order_shares");
+    axi_write(dut, REG_CONTROL, 0x3);
+    check(axi_read(dut, REG_CONTROL), 0x3, "read back control flags");
+
+    //
+    dut->final();
+    delete dut;
 }
 
+// status inputs must appear at their respective addresses
 static void test_status_read(){
-    std::printf("TEST1: config should reset disarmed\n");
+    std::printf("TEST5: status regs reflect actual pipeline inputs\n");
     Vtick2trade_csr *dut = fresh_dut();
+
+    dut->best_bid_price = 1230000;
+    dut->best_bid_shares = 500;
+    dut->best_ask_price = 1230500;
+    dut->best_ask_shares = 300;
+    dut->spread = 500;
+    dut->fire_count = 7;
+    dut->packet_count = 40;
+    dut->gap_count = 6;
+    dut->miss_count = 2;
+    dut->overflow_count = 0;
+    dut->level_collision_count = 0;
+
+    dut->eval();
+
+    check(axi_read(dut, REG_BEST_BID_PRICE), 1230000, "best_bid_price");
+    check(axi_read(dut, REG_BEST_BID_SHARES), 500, "best_bid_shares");
+    check(axi_read(dut, REG_BEST_ASK_PRICE), 1230500, "best_ask_price");
+    check(axi_read(dut, REG_BEST_ASK_SHARES), 300, "best_ask_shares");
+    check(axi_read(dut, REG_SPREAD), 500, "spread");
+    check(axi_read(dut, REG_FIRE_COUNT), 7, "fire_count");
+    check(axi_read(dut, REG_PACKET_COUNT), 40, "packet_count");
+    check(axi_read(dut, REG_GAP_COUNT), 6, "gap_count");
+    check(axi_read(dut, REG_MISS_COUNT), 2, "miss_count");
+
+    //
+    dut->final();
+    delete dut;
 }
 
+// writing a RO addr must be a not allowed (silently) and reading an unmapped should return 0
 static void test_unmapped_addr(){
-    std::printf("TEST1: config should reset disarmed\n");
+    std::printf("TEST6: unmapped and RO addresses work as planned\n");
     Vtick2trade_csr *dut = fresh_dut();
+
+    dut->fire_count = 3;
+    dut->eval();
+
+    axi_write(dut, REG_FIRE_COUNT, 0xFFFFFFFF);
+    check(axi_read(dut, REG_FIRE_COUNT), 3, "RO reg unchanged by the write");
+    check(axi_read(dut, 0xDF), 0, "unmapped address reads 0");
+    axi_write(dut, REG_TRIGGER_PRICE, 789);
+    axi_write(dut, 0xDF, 0x12345678);
+    check(dut->cfg_trigger_price, 789, "unmapped write didn't corrupt things");
+
+    //
+    dut->final();
+    delete dut;
 }
 
+// AW and W are independent so we commit once both are latched (doesn't matter which is first)
 static void test_write_split_channels(){
-    std::printf("TEST1: config should reset disarmed\n");
+    std::printf("TEST7: AW/W independence\n");
     Vtick2trade_csr *dut = fresh_dut();
+
+    dut->s_axi_awaddr = REG_TRIGGER_PRICE;
+    dut->s_axi_awvalid = 1;
+    dut->s_axi_bready = 1;
+
+    dut->eval();
+    tick(dut);
+    dut->s_axi_awvalid = 0;
+    for (int i = 0; i < 5; i++){
+        tick(dut);
+    }
+
+    check(dut->cfg_trigger_price, 0, "no commit if we only have address");
+
+    dut->s_axi_wdata = 123456;
+    dut->s_axi_wstrb = 0xF; // write all bytes
+    dut->s_axi_wvalid = 1;
+
+    dut->eval();
+    tick(dut);
+    dut->s_axi_wvalid = 0;
+    for (int i = 0; i < 5; i++){
+        tick(dut);
+    }
+
+    check(dut->cfg_trigger_price, 123456, "commit once both data and addr arrived");
+    dut->s_axi_bready = 0;
+
+    //
+    dut->final();
+    delete(dut);
 }
 
 int main(int argc, char **argv){
