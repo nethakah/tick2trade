@@ -19,6 +19,9 @@ phys_opt_design
 # route_design - route every net thru actual wires
 route_design
 
+# post-route physical optimization to help small violations
+phys_opt_design -directive AggressiveExplore
+
 # the numbers
 report_timing_summary -file $outdir/timing_route.rpt
 report_utilization -file $outdir/utilization_route.rpt
