@@ -26,7 +26,7 @@ Every stage boundary is AXI4-Stream, so swapping the ingress source is a port-le
 | `order_book.sv` | L3 order table + L2 price ladder + top of book | 11 tests |
 | `trade_signal.sv` | Releases a preloaded order when its conditions hold | 10 tests |
 | `tick2trade_top.sv` | Integration across two clock domains | 5 end-to-end tests |
-| `tick2trade_csr.sv` | AXI4-Lite control/status registers | 7 tests |
+| `tick2trade_csr.sv` | AXI4-Lite control/status registers | 8 tests |
 
 ## Protocols
 
