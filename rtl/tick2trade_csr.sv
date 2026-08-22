@@ -1,7 +1,6 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
-
-// Control/Status registers - drive trade_signal's cfg_* ports via AXI4-Lite (memory addressed)
+`default_nettype none
 
 module tick2trade_csr #(
     parameter int ADDR_WIDTH = 8 

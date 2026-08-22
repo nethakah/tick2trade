@@ -1,5 +1,6 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
+`default_nettype none
 
 module tick2trade_top
     import msg_pkg::*;
@@ -17,6 +18,29 @@ module tick2trade_top
     // core clock domain - PL
     input logic core_clk,
     input logic core_rst_n,
+
+    // axi4-lite slave to be W/R by PS
+    input logic[7:0] s_axi_awaddr,
+    input logic s_axi_awvalid,
+    output logic s_axi_awready,
+
+    input logic[31:0] s_axi_wdata,
+    input logic[3:0] s_axi_wstrb,
+    input logic s_axi_wvalid,
+    output logic s_axi_wready,
+
+    output logic[1:0] s_axi_bresp,
+    output logic s_axi_bvalid,
+    input logic s_axi_bready,
+
+    input logic[7:0] s_axi_araddr,
+    input logic s_axi_arvalid,
+    output logic s_axi_arready,
+
+    output logic[31:0] s_axi_rdata,
+    output logic[1:0] s_axi_rresp,
+    output logic s_axi_rvalid,
+    input logic s_axi_rready,
 
     // fired/loaded order
     output logic order_fire,
