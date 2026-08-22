@@ -301,9 +301,10 @@ static void test_unmapped_addr(){
 
     axi_write(dut, REG_FIRE_COUNT, 0xFFFFFFFF);
     check(axi_read(dut, REG_FIRE_COUNT), 3, "RO reg unchanged by the write");
-    check(axi_read(dut, 0xDF), 0, "unmapped address reads 0");
+    check(axi_read(dut, 0xFC), 0, "unmapped address reads 0");
+    check(dut->s_axi_rresp, 0, "unmapped read still has OKAY");
     axi_write(dut, REG_TRIGGER_PRICE, 789);
-    axi_write(dut, 0xDF, 0x12345678);
+    axi_write(dut, 0xFC, 0x12345678);
     check(dut->cfg_trigger_price, 789, "unmapped write didn't corrupt things");
 
     //
@@ -319,10 +320,14 @@ static void test_write_split_channels(){
     dut->s_axi_awaddr = REG_TRIGGER_PRICE;
     dut->s_axi_awvalid = 1;
     dut->s_axi_bready = 1;
-
     dut->eval();
+
+    check(dut->s_axi_awready, 1, "slave accepts addr");
     tick(dut);
     dut->s_axi_awvalid = 0;
+
+    dut->eval();
+    check(dut->s_axi_awready, 0, "refuse 2nd addr while holding one");
     for (int i = 0; i < 5; i++){
         tick(dut);
     }
@@ -348,6 +353,45 @@ static void test_write_split_channels(){
     delete(dut);
 }
 
+// make sure we handle receiving data first or address first
+static void test_write_data_first(){
+    std::printf("TEST8: W arrive before AW\n");
+    Vtick2trade_csr *dut = fresh_dut();
+
+    dut->s_axi_wdata = 654321;
+    dut->s_axi_wstrb = 0xF;
+    dut->s_axi_wvalid = 1;
+    dut->s_axi_bready = 1;
+
+    dut->eval();
+    check(dut->s_axi_wready, 1, "slave accepts data");
+    tick(dut);
+    dut->s_axi_wvalid = 0;
+    
+    dut->eval();
+    check(dut->s_axi_wready, 0, "refuse more data when holding some already");
+
+    for (int i = 0; i < 5; i++){
+        tick(dut);
+    }
+    check(dut->cfg_trigger_price, 0, "no committing if we only have data");
+
+    dut->s_axi_awaddr = REG_TRIGGER_PRICE;
+    dut->s_axi_awvalid = 1;
+    dut->eval();
+    tick(dut);
+    dut->s_axi_awvalid = 0;
+
+    for (int i = 0; i < 5; i++){
+        tick(dut);
+    }
+    check(dut->cfg_trigger_price, 654321, "commit when addr catches up too");
+
+    dut->s_axi_bready = 0;
+    dut->final();
+    delete dut;
+}
+
 int main(int argc, char **argv){
     Verilated::commandArgs(argc, argv);
 
@@ -358,6 +402,7 @@ int main(int argc, char **argv){
     test_status_read();
     test_unmapped_addr();
     test_write_split_channels();
+    test_write_data_first();
 
     std::printf("\n%s (Failures: %d)\n",
                 failures ? "FAILED" : "PASSED", failures);
