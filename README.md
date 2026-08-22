@@ -26,6 +26,44 @@ Every stage boundary is AXI4-Stream, so swapping the ingress source is a port-le
 | `order_book.sv` | L3 order table + L2 price ladder + top of book | 11 tests |
 | `trade_signal.sv` | Releases a preloaded order when its conditions hold | 10 tests |
 | `tick2trade_top.sv` | Integration across two clock domains | 5 end-to-end tests |
+| `tick2trade_csr.sv` | AXI4-Lite control/status registers | 7 tests |
+
+## Protocols
+
+Two AXI variants, doing different jobs.
+
+**AXI4-Stream** carries the data path. It's a one-way flow with a two-signal handshake: the producer raises `tvalid` when it has data, the consumer raises `tready` when it can take it, and a transfer happens on a cycle where both are high. Once `tvalid` goes up it stays up with stable `tdata` until accepted, which is what makes backpressure work: a stalled consumer just holds `tready` low and the whole pipeline waits.
+
+Every stage boundary uses it, which is why swapping the ingress source is a port-level change. The DMA and a 10G MAC emit the same interface.
+
+**AXI4-Lite** carries the control plane. It's memory-mapped: software writes to an address and a register in fabric changes. Five channels, each with its own valid/ready pair.
+
+```
+write:  AW (address) ──┐
+                       ├──▶ commit ──▶ B (response)
+        W  (data)   ───┘
+
+read:   AR (address) ──▶ R (data)
+```
+
+The catch is that AW and W are **independent**. The master can send the address several cycles before the data, so the slave latches each as it arrives and commits only once both are held. Getting that wrong produces a design that works when the two happen to arrive together and fails when they don't, which is the kind of bug that only shows up on hardware.
+
+`tick2trade_csr.sv` is the AXI-Lite slave. It maps the trade signal's configuration onto addresses software can write, and the pipeline's status counters onto addresses software can read:
+
+| Offset | Register | Access |
+| :-- | :-- | :-- |
+| `0x00` | control: `[0]` armed, `[1]` side | RW |
+| `0x04` | trigger price | RW |
+| `0x08` | order shares | RW |
+| `0x0C` | max spread | RW |
+| `0x10` | min resting size | RW |
+| `0x14` | stock locate | RW |
+| `0x20`–`0x30` | top of book, spread | RO |
+| `0x34`–`0x48` | fire / packet / gap / miss / overflow / collision counters | RO |
+
+Addresses step by four because every register is a 32-bit word and AXI-Lite is byte-addressed, so the register index is `addr[7:2]`.
+
+On hardware those counters are the only visibility there is. There's no printf on an FPGA, so `gap_count` tells you UDP dropped packets, `miss_count` tells you the book saw an execution for an order it never had, and `fire_count` proves the pipeline did work.
 
 ## Results
 
