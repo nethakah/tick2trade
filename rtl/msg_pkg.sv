@@ -1,6 +1,5 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
-`default_nettype none
 
 package msg_pkg;
 
@@ -113,4 +112,3 @@ package msg_pkg;
     localparam int LEVEL_BITS = $bits(level_t); // 96b
 
 endpackage
-`default_nettype wire

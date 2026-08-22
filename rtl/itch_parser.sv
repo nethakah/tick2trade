@@ -1,6 +1,5 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
-`default_nettype none
 
 module itch_parser 
     import msg_pkg::*;
@@ -202,4 +201,3 @@ module itch_parser
     `endif
 
 endmodule
-`default_nettype wire

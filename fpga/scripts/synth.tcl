@@ -16,6 +16,7 @@ read_verilog -sv rtl/moldudp_deframer.sv
 read_verilog -sv rtl/itch_parser.sv
 read_verilog -sv rtl/order_book.sv
 read_verilog -sv rtl/trade_signal.sv
+read_verilog -sv rtl/tick2trade_csr.sv
 read_verilog -sv rtl/tick2trade_top.sv
 
 read_xdc fpga/constraints/tick2trade.xdc

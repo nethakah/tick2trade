@@ -1,6 +1,5 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
-`default_nettype none
 
 module tick2trade_csr #(
     parameter int ADDR_WIDTH = 8 
@@ -261,4 +260,3 @@ module tick2trade_csr #(
 `endif
 
 endmodule
-`default_nettype wire

@@ -1,6 +1,5 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
-`default_nettype none
 
 module async_fifo #(
     parameter int DATA_WIDTH = 8,
@@ -148,4 +147,3 @@ module async_fifo #(
     `endif
 
 endmodule
-`default_nettype wire

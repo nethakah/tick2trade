@@ -1,6 +1,5 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
-`default_nettype none
 
 module order_book
     import msg_pkg::*;
@@ -427,4 +426,3 @@ module order_book
     `endif
 
 endmodule
-`default_nettype wire

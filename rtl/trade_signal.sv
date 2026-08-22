@@ -1,6 +1,5 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
-`default_nettype none
 
 module trade_signal
     import msg_pkg::*;
@@ -170,4 +169,3 @@ end
 `endif
 
 endmodule
-`default_nettype wire

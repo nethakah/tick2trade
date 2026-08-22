@@ -1,6 +1,5 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNUSEDPARAM */
-`default_nettype none
 
 module tick2trade_top
     import msg_pkg::*;
@@ -304,4 +303,3 @@ module tick2trade_top
         .fire_count(fire_count)
     );
 endmodule
-`default_nettype wire
