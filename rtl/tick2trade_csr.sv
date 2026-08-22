@@ -241,4 +241,25 @@ module tick2trade_csr #(
     end
     assign s_axi_rresp = RESP_OKAY;
 
+`ifdef SIM
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        (s_axi_rvalid && !s_axi_rready) |=> $stable(s_axi_rdata)
+    ) else $error("rdata altered while pending read");
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        (s_axi_bvalid && !s_axi_bready) |=> s_axi_bvalid
+    ) else $error("bvalid dropped too early (not accepted by master)");
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        $rose(cfg_armed) |-> $past(write_commit)
+    ) else $error("armed without a write");
+    assert property(
+        @(posedge clk) disable iff (!rst_n)
+        (s_axi_rvalid && !s_axi_rready) |=> s_axi_rvalid
+    ) else $error("rvalid dropped too early (not accepted by master)");
+`endif
+
 endmodule
+
+`default_nettype wire
