@@ -167,7 +167,7 @@ Every byte offset in the RTL traces to a table in the Nasdaq TotalView-ITCH 5.0 
 
 ## Engineering log
 
-`build_logs/journal.md` covers every non-obvious decision and why I made it. `build_logs/bugs.md` has some non-trivial bugs with symptom, cause, fix, and what class of mistake each one was.
+`build_logs/journal.md` covers every non-obvious decision and why I made it. `build_logs/bugs.md` has twelve non-trivial bugs with symptom, cause, fix, and what class of mistake each one was.
 
 A few findings worth pulling out:
 
