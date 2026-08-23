@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 ---------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
-| Date         : Thu Aug 20 23:16:07 2026
+| Date         : Sat Aug 22 17:59:00 2026
 | Host         : ece006.ece.local.cmu.edu running 64-bit Red Hat Enterprise Linux release 8.10 (Ootpa)
 | Command      : report_utilization -hierarchical -file ./fpga/results/utilization_hier.rpt
 | Design       : tick2trade_top
@@ -19,17 +19,19 @@ Table of Contents
 1. Utilization by Hierarchy
 ---------------------------
 
-+----------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
-|    Instance    |      Module      | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | URAM | DSP Blocks |
-+----------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
-| tick2trade_top |            (top) |      20136 |       3616 |   16520 |    0 | 2617 |      0 |      0 |    0 |          0 |
-|   u_book       |       order_book |      19712 |       3200 |   16512 |    0 | 1781 |      0 |      0 |    0 |          0 |
-|   u_deframer   | moldudp_deframer |        184 |        184 |       0 |    0 |  245 |      0 |      0 |    0 |          0 |
-|   u_fifo       |       async_fifo |         27 |         19 |       8 |    0 |   38 |      0 |      0 |    0 |          0 |
-|   u_parser     |      itch_parser |        194 |        194 |       0 |    0 |  455 |      0 |      0 |    0 |          0 |
-|     (u_parser) |      itch_parser |         32 |         32 |       0 |    0 |  158 |      0 |      0 |    0 |          0 |
-|     sb         |      skid_buffer |        162 |        162 |       0 |    0 |  297 |      0 |      0 |    0 |          0 |
-|   u_signal     |     trade_signal |         19 |         19 |       0 |    0 |   98 |      0 |      0 |    0 |          0 |
-+----------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
++--------------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+|      Instance      |      Module      | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | URAM | DSP Blocks |
++--------------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+| tick2trade_top     |            (top) |      20385 |       3865 |   16520 |    0 | 2837 |      0 |      0 |    0 |          0 |
+|   (tick2trade_top) |            (top) |          0 |          0 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|   u_book           |       order_book |      19869 |       3357 |   16512 |    0 | 1781 |      0 |      0 |    0 |          0 |
+|   u_csr            |   tick2trade_csr |        121 |        121 |       0 |    0 |  220 |      0 |      0 |    0 |          0 |
+|   u_deframer       | moldudp_deframer |        214 |        214 |       0 |    0 |  245 |      0 |      0 |    0 |          0 |
+|   u_fifo           |       async_fifo |         27 |         19 |       8 |    0 |   38 |      0 |      0 |    0 |          0 |
+|   u_parser         |      itch_parser |        191 |        191 |       0 |    0 |  455 |      0 |      0 |    0 |          0 |
+|     (u_parser)     |      itch_parser |         32 |         32 |       0 |    0 |  158 |      0 |      0 |    0 |          0 |
+|     sb             |      skid_buffer |        159 |        159 |       0 |    0 |  297 |      0 |      0 |    0 |          0 |
+|   u_signal         |     trade_signal |         39 |         39 |       0 |    0 |   98 |      0 |      0 |    0 |          0 |
++--------------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
 
 

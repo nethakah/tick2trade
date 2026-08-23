@@ -1,13 +1,13 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 --------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version      : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
-| Date              : Thu Aug 20 23:25:46 2026
+| Date              : Sat Aug 22 18:09:05 2026
 | Host              : ece006.ece.local.cmu.edu running 64-bit Red Hat Enterprise Linux release 8.10 (Ootpa)
 | Command           : report_timing -sort_by group -max_paths 10 -path_type summary -file ./fpga/results/timing_paths.rpt
 | Design            : tick2trade_top
 | Device            : xczu7ev-ffvc1156
 | Speed File        : -2  PRODUCTION 1.30 05-15-2022
-| Design State      : Routed
+| Design State      : Physopt postRoute
 | Temperature Grade : E
 --------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -15,54 +15,55 @@ Timing Report
 
 Startpoint                     Endpoint                       Slack(ns)     
 ----------------------------------------------------------------------------
-u_book/curr_msg_reg[order_ref_num][13]/C
-                               u_book/book_mem_reg_512_1023_413_413/RAMS64E1_C/I
-                                                              0.012         
-u_book/curr_msg_reg[is_buy]/C  u_book/level_data_reg[total_shares][7]/D
+u_book/curr_msg_reg[order_ref_num][33]/C
+                               u_book/book_mem_reg_512_1023_232_232/RAMS64E1_D/I
+                                                              0.024         
+u_book/curr_msg_reg[order_ref_num][33]/C
+                               u_book/book_mem_reg_0_511_232_232/RAMS64E1_D/I
+                                                              0.026         
+u_book/curr_msg_reg[order_ref_num][14]/C
+                               u_book/book_mem_reg_0_511_231_231/RAMS64E1_A/I
+                                                              0.027         
+u_book/curr_msg_reg[order_ref_num][33]/C
+                               u_book/book_mem_reg_0_511_232_232/RAMS64E1_C/I
                                                               0.028         
-u_book/curr_msg_reg[is_buy]/C  u_book/level_data_reg[total_shares][10]/D
-                                                              0.050         
-u_book/curr_msg_reg[order_ref_num][13]/C
-                               u_book/book_mem_reg_512_1023_413_413/RAMS64E1_D/I
+u_book/curr_msg_reg[order_ref_num][33]/C
+                               u_book/book_mem_reg_0_511_232_232/RAMS64E1_B/I
+                                                              0.031         
+u_book/curr_msg_reg[order_ref_num][33]/C
+                               u_book/book_mem_reg_512_1023_232_232/RAMS64E1_A/I
+                                                              0.035         
+u_book/curr_msg_reg[is_buy]/C  u_book/level_data_reg[total_shares][18]/D
+                                                              0.043         
+u_book/curr_msg_reg[order_ref_num][14]/C
+                               u_book/book_mem_reg_512_1023_231_231/RAMS64E1_C/I
+                                                              0.047         
+u_book/curr_msg_reg[order_ref_num][14]/C
+                               u_book/book_mem_reg_512_1023_70_70/RAMS64E1_D/I
+                                                              0.052         
+u_book/curr_msg_reg[order_ref_num][33]/C
+                               u_book/book_mem_reg_0_511_255_255/RAMS64E1_H/I
                                                               0.053         
-u_book/curr_msg_reg[order_ref_num][13]/C
-                               u_book/book_mem_reg_512_1023_413_413/RAMS64E1_E/I
-                                                              0.058         
-u_book/curr_msg_reg[order_ref_num][13]/C
-                               u_book/book_mem_reg_0_511_413_413/RAMS64E1_A/I
-                                                              0.065         
-u_book/curr_msg_reg[order_ref_num][13]/C
-                               u_book/book_mem_reg_0_511_562_562/RAMS64E1_A/I
-                                                              0.068         
-u_book/curr_msg_reg[order_ref_num][13]/C
-                               u_book/book_mem_reg_0_511_255_255/RAMS64E1_D/I
-                                                              0.088         
-u_book/curr_msg_reg[order_ref_num][13]/C
-                               u_book/book_mem_reg_0_511_557_557/RAMS64E1_A/I
-                                                              0.088         
-u_book/curr_msg_reg[order_ref_num][13]/C
-                               u_book/book_mem_reg_512_1023_239_239/RAMS64E1_C/I
-                                                              0.092         
-u_fifo/w_ptr_gray_reg[0]/C     u_fifo/mem_reg_0_15_0_8/RAMA/WE
-                                                              8.586         
-u_fifo/w_ptr_gray_reg[0]/C     u_fifo/mem_reg_0_15_0_8/RAMA_D1/WE
-                                                              8.586         
-u_fifo/w_ptr_gray_reg[0]/C     u_fifo/mem_reg_0_15_0_8/RAMB/WE
-                                                              8.586         
-u_fifo/w_ptr_gray_reg[0]/C     u_fifo/mem_reg_0_15_0_8/RAMB_D1/WE
-                                                              8.586         
-u_fifo/w_ptr_gray_reg[0]/C     u_fifo/mem_reg_0_15_0_8/RAMC/WE
-                                                              8.586         
-u_fifo/w_ptr_gray_reg[0]/C     u_fifo/mem_reg_0_15_0_8/RAMC_D1/WE
-                                                              8.586         
-u_fifo/w_ptr_gray_reg[0]/C     u_fifo/mem_reg_0_15_0_8/RAMD/WE
-                                                              8.586         
-u_fifo/w_ptr_gray_reg[0]/C     u_fifo/mem_reg_0_15_0_8/RAMD_D1/WE
-                                                              8.586         
-u_fifo/w_ptr_gray_reg[0]/C     u_fifo/mem_reg_0_15_0_8/RAME/WE
-                                                              8.586         
-u_fifo/w_ptr_gray_reg[0]/C     u_fifo/mem_reg_0_15_0_8/RAME_D1/WE
-                                                              8.586         
+u_fifo/r_ptr_gray_q2_reg[3]/C  u_fifo/mem_reg_0_15_0_8/RAMA/WE
+                                                              8.527         
+u_fifo/r_ptr_gray_q2_reg[3]/C  u_fifo/mem_reg_0_15_0_8/RAMA_D1/WE
+                                                              8.527         
+u_fifo/r_ptr_gray_q2_reg[3]/C  u_fifo/mem_reg_0_15_0_8/RAMB/WE
+                                                              8.527         
+u_fifo/r_ptr_gray_q2_reg[3]/C  u_fifo/mem_reg_0_15_0_8/RAMB_D1/WE
+                                                              8.527         
+u_fifo/r_ptr_gray_q2_reg[3]/C  u_fifo/mem_reg_0_15_0_8/RAMC/WE
+                                                              8.527         
+u_fifo/r_ptr_gray_q2_reg[3]/C  u_fifo/mem_reg_0_15_0_8/RAMC_D1/WE
+                                                              8.527         
+u_fifo/r_ptr_gray_q2_reg[3]/C  u_fifo/mem_reg_0_15_0_8/RAMD/WE
+                                                              8.527         
+u_fifo/r_ptr_gray_q2_reg[3]/C  u_fifo/mem_reg_0_15_0_8/RAMD_D1/WE
+                                                              8.527         
+u_fifo/r_ptr_gray_q2_reg[3]/C  u_fifo/mem_reg_0_15_0_8/RAME/WE
+                                                              8.527         
+u_fifo/r_ptr_gray_q2_reg[3]/C  u_fifo/mem_reg_0_15_0_8/RAME_D1/WE
+                                                              8.527         
 
 
 
