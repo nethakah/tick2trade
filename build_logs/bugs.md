@@ -63,3 +63,8 @@ Linting: `verilator --lint-only -Wall --top-module modulename rtl/msg_pkg.sv rtl
 - Symptom: added HD.CLK_SRC to fix empty timing summary.
 - Cause: Didn't check for real sites on this device; vivado accepted a nonexistent one and ran normally.
 - Fix: real sites findable via `get_sites -filter {SITE_TYPE =~ *BUFG*}`.
+
+### bug-12: default_nettype
+- Symptom: full design linted and verified in Verilator, but Vivado failing at elaboration: "net type must be explicitly specified for 'clk' when default_nettype is none."
+- Cause: `logic` is a data type not a net type. We put default net type to `none` and Vivado doesn't accept it; outputs were fine but not the input declarations.
+- Fix: removed the directive. I think we could also do `input wire` but things were fine without the default net type (it just would make errors look a bit cleaner), so I removed it. 

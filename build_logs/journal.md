@@ -263,3 +263,17 @@
 - 3.4ns: met +0.012, path 3.300ns, 10 levels, 68% routing.
 - 3.5ns: violated -0.102, path 3.414ns, 3 levels, 93% routing.
 - I think a looser target makes the placer stop optimizing early so cells land further apart in the end. Went back to 3.4ns in the constraint.
+
+### log-51: AXI-Lite CSR block (2026-08-21)
+- Wrote the rtl to drive the `cfg_*` ports for trade_signal (to be driven by software over AXI-Lite)
+- As per AXI-Lite, 5 channels each with valid/ready. AW/W are completely independent, they can come at completely different times or orders.
+- Register index is `addr[7:2]` since AXI-Lite is byte-addressed and each register is 4 bytes so the bottom 2 bits only select bytes within a word.
+- Unmapped addresses are silent no-ops and read as 0.
+- `cfg_armed` resets to 0 so kill switch defaults to off and software must arm it for the fabric to fire.
+- `cfg_*` became internal wires, not ports, in the `_top` module, to wire it in.
+
+### log-52: 288MHz with CSR (2026-08-22)
+- The ~220 registers and 34 new top level ports pushed post-route from +0.012ns to -0.082ns at 3.4ns.
+- Tried `phys_opt_design -directive AggressiveExplore` which recovered 0.014ns but that means placement was already near optimal.
+- Relaxed to 3.5ns, closing at +0.024ns, and the placer found a 9-level path instead of 10, so an improvement!
+- Final results: 288MHz, 3.476ns, 20229 LUTs (8.78%), 2836 FF (0.62%), 0 BRAM/URAM/DSP.
