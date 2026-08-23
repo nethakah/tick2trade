@@ -2,7 +2,7 @@
 
 A NASDAQ ITCH 5.0 tick-to-signal pipeline in SystemVerilog, built for a Xilinx ZCU104 (Zynq UltraScale+ XCZU7EV-2). Raw MoldUDP64 packets go in one end, order book state and a trading trigger come out the other.
 
-Closed timing at **294 MHz post-route** using **8.64% of the device's LUTs**. All seven modules verified in Verilator with C++ testbenches plus SystemVerilog assertions.
+Closed timing at **288 MHz post-route** using **8.78% of the device's LUTs**. All eight modules verified in Verilator with C++ testbenches plus SystemVerilog assertions.
 
 > RTL is done and synthesized. Board bring-up (AXI-DMA block design, PYNQ host software, measured latency) is what I'm working on now.
 
@@ -12,6 +12,9 @@ Closed timing at **294 MHz post-route** using **8.64% of the device's LUTs**. Al
 DMA ──▶ async_fifo ──▶ moldudp_deframer ──▶ itch_parser ──▶ order_book ──▶ trade_signal
         (CDC)          (strip envelope,      (decode into    (L3 + L2)      (release the
                         detect gaps)          msg_t)                         preloaded order)
+                                                    ▲
+                        AXI4-Lite ──▶ tick2trade_csr ┘
+                                      (config in, status out)
 ```
 
 Every stage boundary is AXI4-Stream, so swapping the ingress source is a port-level change. A 10G Ethernet MAC emits the same interface the DMA does.
@@ -25,16 +28,14 @@ Every stage boundary is AXI4-Stream, so swapping the ingress source is a port-le
 | `itch_parser.sv` | Decodes Add / Executed / Delete into a packed struct | 6 tests, 100k randomized |
 | `order_book.sv` | L3 order table + L2 price ladder + top of book | 11 tests |
 | `trade_signal.sv` | Releases a preloaded order when its conditions hold | 10 tests |
-| `tick2trade_top.sv` | Integration across two clock domains | 5 end-to-end tests |
 | `tick2trade_csr.sv` | AXI4-Lite control/status registers | 8 tests |
+| `tick2trade_top.sv` | Integration across two clock domains | 5 end-to-end tests |
 
 ## Protocols
 
 Two AXI variants, doing different jobs.
 
-**AXI4-Stream** carries the data path. It's a one-way flow with a two-signal handshake: the producer raises `tvalid` when it has data, the consumer raises `tready` when it can take it, and a transfer happens on a cycle where both are high. Once `tvalid` goes up it stays up with stable `tdata` until accepted, which is what makes backpressure work: a stalled consumer just holds `tready` low and the whole pipeline waits.
-
-Every stage boundary uses it, which is why swapping the ingress source is a port-level change. The DMA and a 10G MAC emit the same interface.
+**AXI4-Stream** carries the data path. It's a one-way flow with a two-signal handshake: the producer raises `tvalid` when it has data, the consumer raises `tready` when it can take it, and a transfer happens on a cycle where both are high. Once `tvalid` goes up it stays up with stable `tdata` until accepted, which is what makes backpressure work. A stalled consumer just holds `tready` low and the whole pipeline waits.
 
 **AXI4-Lite** carries the control plane. It's memory-mapped: software writes to an address and a register in fabric changes. Five channels, each with its own valid/ready pair.
 
@@ -65,19 +66,23 @@ Addresses step by four because every register is a 32-bit word and AXI-Lite is b
 
 On hardware those counters are the only visibility there is. There's no printf on an FPGA, so `gap_count` tells you UDP dropped packets, `miss_count` tells you the book saw an execution for an order it never had, and `fire_count` proves the pipeline did work.
 
+`cfg_armed` resets to 0. The kill switch defaults to off, so the fabric physically cannot fire until software explicitly arms it, and an assertion enforces that it can only rise on a committed write.
+
 ## Results
 
 Post-route on xczu7ev-ffvc1156-2-e with Vivado 2024.1. Reports are in `fpga/results/` and reproducible with `scripts/synth.sh` and `scripts/impl.sh`.
 
 | Metric | Value |
 | :-- | :-- |
-| **Fmax** | **294 MHz** (3.388 ns critical path, +0.012 ns slack against a 3.4 ns constraint) |
-| Critical path | `order_ref_num` to the L3 write port: 10 logic levels, 5 carry chains of address decode, 68% routing delay |
-| LUTs | 19,914 / 230,400 (**8.64%**) |
-| Registers | 2,615 / 460,800 (0.57%) |
+| **Fmax** | **288 MHz** (3.476 ns critical path, +0.024 ns slack against a 3.5 ns constraint) |
+| Critical path | `curr_msg.order_ref_num` to the L3 write port: 9 logic levels, 4 carry chains of address decode, 72% routing delay |
+| LUTs | 20,229 / 230,400 (**8.78%**) |
+| Registers | 2,836 / 460,800 (0.62%) |
 | BRAM / URAM / DSP | 0 / 0 / 0 |
 
-Calculated tick-to-signal at 3.388 ns per cycle: 37 parser cycles + 4 book cycles + 1 signal cycle, so roughly **142 ns** for a 36-byte Add Order. That's arithmetic though, not a measurement. The real number comes off the board.
+Calculated tick-to-signal at 3.476 ns per cycle: 37 parser cycles + 4 book cycles + 1 signal cycle, so roughly **146 ns** for a 36-byte Add Order. That's arithmetic though, not a measurement. The real number comes off the board.
+
+The critical path has landed in the same place across every run: the L3 memory write port, where carry chains decode one of 1,024 buckets across 1,280 distributed RAM primitives. Which register sources it moves with placement, the bottleneck doesn't. That decode is the direct cost of building a 640-bit-wide memory out of LUTs.
 
 ## Why there are two parsing stages
 
@@ -121,9 +126,11 @@ rm -rf obj_dir && verilator --cc --exe --build -j 0 --assert +define+SIM \
     tb/tb_itch_parser.cpp && ./obj_dir/Vitch_parser
 ```
 
-The testbenches use 15-122 style `REQUIRES` / `ENSURES` contracts over `assert()`. The SVA covers the AXI4-Stream handshake, book invariants (a crossed market is impossible, since those orders would have matched), and pulse-width properties. Three of the eleven bugs I logged would have been caught by those assertions at the moment they happened instead of showing up three modules downstream.
+The testbenches use 15-122 style `REQUIRES` / `ENSURES` contracts over `assert()`. The SVA covers the AXI handshakes on both protocols, book invariants (a crossed market is impossible, since those orders would have matched), and pulse-width properties. Three of the twelve bugs I logged would have been caught by those assertions at the moment they happened instead of showing up three modules downstream.
 
 Stimulus is back-to-back by default. Real feeds and DMA never pause between messages, and gapped stimulus hides last-byte/first-byte FSM bugs that only turn up on hardware.
+
+The integration test configures the pipeline over AXI-Lite rather than poking `cfg_*` directly, so it exercises the exact path the host software will use.
 
 ## Design notes
 
@@ -133,7 +140,7 @@ Every byte offset in the RTL traces to a table in the Nasdaq TotalView-ITCH 5.0 
 
 **Backpressure is lossless end to end.** When the book stalls it propagates back through the skid buffer, the parser, and the FIFO until the DMA pauses and the data just sits in DDR4. A live exchange feed can't be backpressured, so that version would need drop-and-recover using the sequence numbers the deframer already tracks.
 
-**The book ended up in distributed LUTRAM, not block memory.** I originally planned UltraRAM for the L3 (see log-6), but that reasoning was about capacity when the actual constraint is port width. BRAM and URAM are both natively 72 bits wide and my bucket is 640, so neither can serve it in a single cycle. Narrowing the word to fit would mean four sequential reads per lookup, which trades away the constant-latency property to gain a memory type. Turns out hot-path structures in real HFT designs make the same trade, and block memory serves bulk state where sequential access is fine.
+**The book ended up in distributed LUTRAM, not block memory.** I originally planned UltraRAM for the L3, but that reasoning was about capacity when the actual constraint is port width. BRAM and URAM are both natively 72 bits wide and my bucket is 640, so neither can serve it in a single cycle. Narrowing the word to fit would mean four sequential reads per lookup, which trades away the constant-latency property to gain a memory type. Turns out hot-path structures in real HFT designs make the same trade, and block memory serves bulk state where sequential access is fine.
 
 ## Scope
 
@@ -160,13 +167,14 @@ Every byte offset in the RTL traces to a table in the Nasdaq TotalView-ITCH 5.0 
 
 ## Engineering log
 
-`build_logs/journal.md` has entries covering every non-obvious (and some obvious, in retrospect) decision and why I made it. `build_logs/bugs.md` has some non-trivial bugs with symptom, cause, fix, and what class of mistake each one was (there were dozens of repeated bugs but I noted the ones that would be useful to reference in the future when looking back at this design).
+`build_logs/journal.md` covers every non-obvious decision and why I made it. `build_logs/bugs.md` has some non-trivial bugs with symptom, cause, fix, and what class of mistake each one was.
 
 A few findings worth pulling out:
 
 - **Vivado can't infer RAM from arrays of packed structs.** It built 598,016 flip-flops and around 56,000 muxes instead, and synthesis ground away for over two hours. Declaring the storage as a flat bit vector and casting at the boundary took it down to 90 seconds.
-- **Timing closure isn't monotonic in the constraint.** Relaxing from 3.4 ns to 3.5 ns made timing WORSE. The placer stops optimizing once it thinks timing is met, so cells landed further apart and the resulting path was 93% routing across three logic levels.
-- **The critical path moved between synthesis and routing.** Post-synth it was the book's rescan comparison, post-route it's the L3 write port. Placement decides which path is worst, so you can't identify the real bottleneck before routing.
+- **Timing closure isn't monotonic in the constraint.** Relaxing from 3.4 ns to 3.5 ns once made timing WORSE, because the placer stops optimizing when it thinks timing is met. Later, when the design genuinely didn't meet at 3.4 ns, the same relaxation helped and the placer found a shorter path. The rule isn't "tighter is better", it's that the constraint should sit close to the achievable limit.
+- **The critical path moves between synthesis and routing.** Post-synth it's the book's rescan comparison, post-route it's the L3 write port. Placement decides which path is worst, so you can't identify the real bottleneck before routing.
+- **Verilator-clean isn't Vivado-clean.** A design that linted, built, and passed every test failed at Vivado elaboration, twice, for reasons simulation has no concept of.
 
 ## Toolchain
 
