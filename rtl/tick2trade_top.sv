@@ -103,6 +103,41 @@ module tick2trade_top
     logic[31:0] book_ask_shares;
     logic book_valid;
 
+    // latency measurement/tracker via timestamps since software cant time ns events
+    logic[31:0] cycle_count; // 1 tick per core_clk
+    logic[31:0] ingress_cycle; // cycle_count value when final byte arrived
+    logic[31:0] fire_latency_cycles; // cycles from final ingress byte to the most recent fire
+    logic[31:0] fire_latency_min;
+    logic[31:0] fire_latency_max;
+    logic[31:0] curr_latency;
+    assign curr_latency = cycle_count - ingress_cycle;
+
+    always_ff @(posedge core_clk) begin
+        if (!core_rst_n) begin
+            cycle_count <= '0;
+            ingress_cycle <= '0;
+            fire_latency_cycles <= '0;
+            fire_latency_min <= 32'hFFFFFFFF;
+            fire_latency_max <= '0;
+        end
+        else begin
+            cycle_count <= cycle_count + 32'd1;
+            if (deframer_in_tvalid && deframer_in_tready) begin
+                ingress_cycle <= cycle_count;
+            end
+            if (order_fire) begin
+                fire_latency_cycles <= curr_latency;
+                if (curr_latency > fire_latency_max) begin
+                    fire_latency_max <= curr_latency;
+                end
+                if (curr_latency < fire_latency_min) begin
+                    fire_latency_min <= curr_latency;
+                end
+            end
+        end
+    end
+
+
     /*
     AXI4-lite ctrl/status registers for software to write/read
     */
@@ -151,7 +186,10 @@ module tick2trade_top
         .gap_count(gap_count),
         .miss_count(miss_count),
         .overflow_count(overflow_count),
-        .level_collision_count(level_collision_count)
+        .level_collision_count(level_collision_count),
+        .fire_latency_cycles(fire_latency_cycles),
+        .fire_latency_min(fire_latency_min),
+        .fire_latency_max(fire_latency_max)
     );
 
     /* 

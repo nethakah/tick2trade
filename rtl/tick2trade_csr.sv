@@ -55,27 +55,33 @@ module tick2trade_csr #(
     input logic[31:0] gap_count,
     input logic[31:0] miss_count,
     input logic[31:0] overflow_count,
-    input logic[31:0] level_collision_count
+    input logic[31:0] level_collision_count,
+    input logic[31:0] fire_latency_cycles,
+    input logic[31:0] fire_latency_min,
+    input logic[31:0] fire_latency_max
 );
 
     // register map
-    localparam logic[5:0] REG_CONTROL = 6'h00; // RW ([0]=armed) ([1]=side(1=buy))
-    localparam logic[5:0] REG_TRIGGER_PRICE = 6'h01; // RW fire when market hits this
-    localparam logic[5:0] REG_ORDER_SHARES = 6'h02; // RW size of preloaded order
-    localparam logic[5:0] REG_SPREAD_MAX = 6'h03; // RW max spread
-    localparam logic[5:0] REG_SIZE_MIN = 6'h04; // RW require this much resting size
-    localparam logic[5:0] REG_STOCK_LOCATE = 6'h05; // RW what symbol
-    localparam logic[5:0] REG_BEST_BID_PRICE = 6'h08; // R
-    localparam logic[5:0] REG_BEST_BID_SHARES = 6'h09; // R
-    localparam logic[5:0] REG_BEST_ASK_PRICE = 6'h0A; // R
-    localparam logic[5:0] REG_BEST_ASK_SHARES = 6'h0B; // R
-    localparam logic[5:0] REG_SPREAD = 6'h0C; // R
-    localparam logic[5:0] REG_FIRE_COUNT = 6'h0D; // R orders released
-    localparam logic[5:0] REG_PACKET_COUNT = 6'h0E; // R packets deframed
-    localparam logic[5:0] REG_GAP_COUNT = 6'h0F; // R packets lost to gaps
-    localparam logic[5:0] REG_MISS_COUNT = 6'h10; // R E/D for an unknown order
-    localparam logic[5:0] REG_OVERFLOW_COUNT = 6'h11; // R L3 bucket full when trying to insert
-    localparam logic[5:0] REG_LEVEL_COLLISION = 6'h12; // R 2 prices hashed to 1 L2 slot
+    localparam logic[5:0] REG_CONTROL = 6'h00; // RW; ([0]=armed) ([1]=side(1=buy))
+    localparam logic[5:0] REG_TRIGGER_PRICE = 6'h01; // RW; fire when market hits this
+    localparam logic[5:0] REG_ORDER_SHARES = 6'h02; // RW; size of preloaded order
+    localparam logic[5:0] REG_SPREAD_MAX = 6'h03; // RW; max spread
+    localparam logic[5:0] REG_SIZE_MIN = 6'h04; // RW; require this much resting size
+    localparam logic[5:0] REG_STOCK_LOCATE = 6'h05; // RW; what symbol
+    localparam logic[5:0] REG_BEST_BID_PRICE = 6'h08; // R;
+    localparam logic[5:0] REG_BEST_BID_SHARES = 6'h09; // R;
+    localparam logic[5:0] REG_BEST_ASK_PRICE = 6'h0A; // R;
+    localparam logic[5:0] REG_BEST_ASK_SHARES = 6'h0B; // R;
+    localparam logic[5:0] REG_SPREAD = 6'h0C; // R;
+    localparam logic[5:0] REG_FIRE_COUNT = 6'h0D; // R; orders released
+    localparam logic[5:0] REG_PACKET_COUNT = 6'h0E; // R; packets deframed
+    localparam logic[5:0] REG_GAP_COUNT = 6'h0F; // R; packets lost to gaps
+    localparam logic[5:0] REG_MISS_COUNT = 6'h10; // R; E/D for an unknown order
+    localparam logic[5:0] REG_OVERFLOW_COUNT = 6'h11; // R; L3 bucket full when trying to insert
+    localparam logic[5:0] REG_LEVEL_COLLISION = 6'h12; // R; 2 prices hashed to 1 L2 slot
+    localparam logic[5:0] REG_FIRE_LATENCY = 6'h13; // R; cycles, most recent fire
+    localparam logic[5:0] REG_LATENCY_MIN = 6'h14; // R; cycles, best latency we got
+    localparam logic[5:0] REG_LATENCY_MAX = 6'h15; // R; cycles, worst latency we got
     localparam logic[1:0] RESP_OKAY = 2'b00; // response code (tell master whether it worked)
 
     logic[5:0] write_index;
@@ -226,6 +232,15 @@ module tick2trade_csr #(
                     end
                     REG_LEVEL_COLLISION: begin
                         s_axi_rdata <= level_collision_count;
+                    end
+                    REG_FIRE_LATENCY: begin
+                        s_axi_rdata <= fire_latency_cycles;
+                    end
+                    REG_LATENCY_MIN: begin
+                        s_axi_rdata <= fire_latency_min;
+                    end
+                    REG_LATENCY_MAX: begin
+                        s_axi_rdata <= fire_latency_max;
                     end
                     default: begin
                         s_axi_rdata <= '0;
