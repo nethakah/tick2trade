@@ -262,25 +262,26 @@
 ### log-50: Relaxing constraint made timing worse (2026-08-20)
 - 3.4ns: met +0.012, path 3.300ns, 10 levels, 68% routing.
 - 3.5ns: violated -0.102, path 3.414ns, 3 levels, 93% routing.
-- I think a looser target makes the placer stop optimizing early so cells land further apart in the end. Went back to 3.4ns in the constraint.
+- I think a looser target makes the placer stop optimizing early so cells land further apart in the end, but we'll see as we progress through to block design stuff.
 
 ### log-51: AXI-Lite CSR block (2026-08-21)
-- Wrote the rtl to drive the `cfg_*` ports for trade_signal (to be driven by software over AXI-Lite)
-- As per AXI-Lite, 5 channels each with valid/ready. AW/W are completely independent, they can come at completely different times or orders.
+- Wrote the rtl to drive the `cfg_*` ports.
+- Big thing here to is AW/W are completely independent, so they can come at completely different times or orders.
 - Register index is `addr[7:2]` since AXI-Lite is byte-addressed and each register is 4 bytes so the bottom 2 bits only select bytes within a word.
-- Unmapped addresses are silent no-ops and read as 0.
+- Unmapped addresses don't do anything and read as 0 since I think erroring would cause more problems than necessary. So note to self to keep track of that please.
 - `cfg_armed` resets to 0 so kill switch defaults to off and software must arm it for the fabric to fire.
-- `cfg_*` became internal wires, not ports, in the `_top` module, to wire it in.
+- Made the `cfg_*` stuff internal wires now instead of ports, in the `_top` module, to wire things in properly now that we actually have the PS side to drive all that.
 
 ### log-52: 288MHz with CSR (2026-08-22)
 - The ~220 registers and 34 new top level ports pushed post-route from +0.012ns to -0.082ns at 3.4ns.
-- Tried `phys_opt_design -directive AggressiveExplore` which recovered 0.014ns but that means placement was already near optimal.
-- Relaxed to 3.5ns, closing at +0.024ns, and the placer found a 9-level path instead of 10, so an improvement!
+- Tried `phys_opt_design -directive AggressiveExplore` which I saw online to help and it did recover 0.014ns but that means placement was already near optimal since it's such a small change.
+- Hence, had to relax back to 3.5ns, closing at +0.024ns, and the placer found a 9-level path instead of 10, so somewhat of an improvement despite previously having issues! 
 - Final results: 288MHz, 3.476ns, 20229 LUTs (8.78%), 2836 FF (0.62%), 0 BRAM/URAM/DSP.
 
 ### log-53: Routing vs Logic ceiling (2026-08-24)
 - Latency measuring added ~220 registers, still closing at 3.5ns with +0.034ns slack, 288 MHz.
-- The critical path is now different, from curr_level_reg to bid_levels LUTRAM write address. Zero logic levels, 0.080ns of gate delay, 3.188ns of wire, 97.6% routing.
-- The placer gave us "Very high fanout net 'curr_level_reg[0]_rep__19_n_0' ... fanout 1080." 1 reg bit has to reach 1080 LUTRAM address pins. 
-- No logic optimization fixes that because there is no logic, it's a distance problem, which comes back to the cost of writing a 640b wide memory of 1280 distributed RAM primitives (log-44).
-- 288 MHz is the ceiling using the memory architecture I made, not necessarily the ceiling for the logic. I suppose it's worth mentioning that narrowing the bucket to bit BRAM would collapse that fanout but it'd cost us the same 4 sequential reads per lookup we knew about before.
+- Now the critical path is kind of different, from curr_level_reg to bid_levels LUTRAM write address. There's precisely zero logic levels, 0.080ns of gate delay, 3.188ns of wire, 97.6% routing.
+- On running things, the placer outputted "Very high fanout net 'curr_level_reg[0]_rep__19_n_0' ... fanout 1080." I believe 1 reg bit has to reach 1080 LUTRAM address pins so that makes sense.
+- There's not really any logic optimization fixes now because there is no logic, it's actually just a distance problem, which comes back to the cost of writing a 640b wide memory of 1280 distributed RAM primitives (mentioned in my log-44).
+- 288 MHz is the ceiling using the memory architecture I made, not necessarily the ceiling for the logic. 
+- I suppose it's worth mentioning that narrowing the bucket to bit BRAM would collapse that fanout but it'd cost us the same 4 sequential reads per lookup we knew about before.
