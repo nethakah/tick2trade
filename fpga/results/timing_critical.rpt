@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 --------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version      : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
-| Date              : Sat Aug 22 17:59:40 2026
+| Date              : Mon Aug 24 22:05:32 2026
 | Host              : ece006.ece.local.cmu.edu running 64-bit Red Hat Enterprise Linux release 8.10 (Ootpa)
 | Command           : report_timing -delay_type max -max_paths 10 -nworst 1 -unique_pins -file ./fpga/results/timing_critical.rpt
 | Design            : tick2trade_top
@@ -34,7 +34,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       0.000     0.000 r  
                                                       0.000     0.000 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     0.000    u_book/core_clk
+                         net (fo=19554, unset)        0.000     0.000    u_book/core_clk
                          FDRE                                         r  u_book/rescan_index_reg_rep_rep[1]__0/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_FDRE_C_Q)         0.077     0.077 r  u_book/rescan_index_reg_rep_rep[1]__0/Q
@@ -70,7 +70,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       3.500     3.500 r  
                                                       0.000     3.500 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     3.500    u_book/core_clk
+                         net (fo=19554, unset)        0.000     3.500    u_book/core_clk
                          FDSE                                         r  u_book/rescan_best_price_reg[0]/C
                          clock pessimism              0.000     3.500    
                          clock uncertainty           -0.035     3.465    
@@ -102,7 +102,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       0.000     0.000 r  
                                                       0.000     0.000 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     0.000    u_book/core_clk
+                         net (fo=19554, unset)        0.000     0.000    u_book/core_clk
                          FDRE                                         r  u_book/rescan_index_reg_rep_rep[1]__0/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_FDRE_C_Q)         0.077     0.077 r  u_book/rescan_index_reg_rep_rep[1]__0/Q
@@ -138,7 +138,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       3.500     3.500 r  
                                                       0.000     3.500 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     3.500    u_book/core_clk
+                         net (fo=19554, unset)        0.000     3.500    u_book/core_clk
                          FDSE                                         r  u_book/rescan_best_price_reg[10]/C
                          clock pessimism              0.000     3.500    
                          clock uncertainty           -0.035     3.465    
@@ -170,7 +170,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       0.000     0.000 r  
                                                       0.000     0.000 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     0.000    u_book/core_clk
+                         net (fo=19554, unset)        0.000     0.000    u_book/core_clk
                          FDRE                                         r  u_book/rescan_index_reg_rep_rep[1]__0/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_FDRE_C_Q)         0.077     0.077 r  u_book/rescan_index_reg_rep_rep[1]__0/Q
@@ -206,7 +206,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       3.500     3.500 r  
                                                       0.000     3.500 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     3.500    u_book/core_clk
+                         net (fo=19554, unset)        0.000     3.500    u_book/core_clk
                          FDSE                                         r  u_book/rescan_best_price_reg[11]/C
                          clock pessimism              0.000     3.500    
                          clock uncertainty           -0.035     3.465    
@@ -238,7 +238,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       0.000     0.000 r  
                                                       0.000     0.000 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     0.000    u_book/core_clk
+                         net (fo=19554, unset)        0.000     0.000    u_book/core_clk
                          FDRE                                         r  u_book/rescan_index_reg_rep_rep[1]__0/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_FDRE_C_Q)         0.077     0.077 r  u_book/rescan_index_reg_rep_rep[1]__0/Q
@@ -274,7 +274,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       3.500     3.500 r  
                                                       0.000     3.500 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     3.500    u_book/core_clk
+                         net (fo=19554, unset)        0.000     3.500    u_book/core_clk
                          FDSE                                         r  u_book/rescan_best_price_reg[12]/C
                          clock pessimism              0.000     3.500    
                          clock uncertainty           -0.035     3.465    
@@ -306,7 +306,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       0.000     0.000 r  
                                                       0.000     0.000 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     0.000    u_book/core_clk
+                         net (fo=19554, unset)        0.000     0.000    u_book/core_clk
                          FDRE                                         r  u_book/rescan_index_reg_rep_rep[1]__0/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_FDRE_C_Q)         0.077     0.077 r  u_book/rescan_index_reg_rep_rep[1]__0/Q
@@ -342,7 +342,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       3.500     3.500 r  
                                                       0.000     3.500 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     3.500    u_book/core_clk
+                         net (fo=19554, unset)        0.000     3.500    u_book/core_clk
                          FDSE                                         r  u_book/rescan_best_price_reg[13]/C
                          clock pessimism              0.000     3.500    
                          clock uncertainty           -0.035     3.465    
@@ -374,7 +374,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       0.000     0.000 r  
                                                       0.000     0.000 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     0.000    u_book/core_clk
+                         net (fo=19554, unset)        0.000     0.000    u_book/core_clk
                          FDRE                                         r  u_book/rescan_index_reg_rep_rep[1]__0/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_FDRE_C_Q)         0.077     0.077 r  u_book/rescan_index_reg_rep_rep[1]__0/Q
@@ -410,7 +410,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       3.500     3.500 r  
                                                       0.000     3.500 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     3.500    u_book/core_clk
+                         net (fo=19554, unset)        0.000     3.500    u_book/core_clk
                          FDSE                                         r  u_book/rescan_best_price_reg[14]/C
                          clock pessimism              0.000     3.500    
                          clock uncertainty           -0.035     3.465    
@@ -442,7 +442,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       0.000     0.000 r  
                                                       0.000     0.000 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     0.000    u_book/core_clk
+                         net (fo=19554, unset)        0.000     0.000    u_book/core_clk
                          FDRE                                         r  u_book/rescan_index_reg_rep_rep[1]__0/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_FDRE_C_Q)         0.077     0.077 r  u_book/rescan_index_reg_rep_rep[1]__0/Q
@@ -478,7 +478,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       3.500     3.500 r  
                                                       0.000     3.500 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     3.500    u_book/core_clk
+                         net (fo=19554, unset)        0.000     3.500    u_book/core_clk
                          FDSE                                         r  u_book/rescan_best_price_reg[15]/C
                          clock pessimism              0.000     3.500    
                          clock uncertainty           -0.035     3.465    
@@ -510,7 +510,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       0.000     0.000 r  
                                                       0.000     0.000 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     0.000    u_book/core_clk
+                         net (fo=19554, unset)        0.000     0.000    u_book/core_clk
                          FDRE                                         r  u_book/rescan_index_reg_rep_rep[1]__0/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_FDRE_C_Q)         0.077     0.077 r  u_book/rescan_index_reg_rep_rep[1]__0/Q
@@ -546,7 +546,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       3.500     3.500 r  
                                                       0.000     3.500 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     3.500    u_book/core_clk
+                         net (fo=19554, unset)        0.000     3.500    u_book/core_clk
                          FDSE                                         r  u_book/rescan_best_price_reg[16]/C
                          clock pessimism              0.000     3.500    
                          clock uncertainty           -0.035     3.465    
@@ -578,7 +578,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       0.000     0.000 r  
                                                       0.000     0.000 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     0.000    u_book/core_clk
+                         net (fo=19554, unset)        0.000     0.000    u_book/core_clk
                          FDRE                                         r  u_book/rescan_index_reg_rep_rep[1]__0/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_FDRE_C_Q)         0.077     0.077 r  u_book/rescan_index_reg_rep_rep[1]__0/Q
@@ -614,7 +614,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       3.500     3.500 r  
                                                       0.000     3.500 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     3.500    u_book/core_clk
+                         net (fo=19554, unset)        0.000     3.500    u_book/core_clk
                          FDSE                                         r  u_book/rescan_best_price_reg[17]/C
                          clock pessimism              0.000     3.500    
                          clock uncertainty           -0.035     3.465    
@@ -646,7 +646,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       0.000     0.000 r  
                                                       0.000     0.000 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     0.000    u_book/core_clk
+                         net (fo=19554, unset)        0.000     0.000    u_book/core_clk
                          FDRE                                         r  u_book/rescan_index_reg_rep_rep[1]__0/C
   -------------------------------------------------------------------    -------------------
                          FDRE (Prop_FDRE_C_Q)         0.077     0.077 r  u_book/rescan_index_reg_rep_rep[1]__0/Q
@@ -682,7 +682,7 @@ Slack (MET) :             0.877ns  (required time - arrival time)
                          (clock core_clk rise edge)
                                                       3.500     3.500 r  
                                                       0.000     3.500 r  core_clk (IN)
-                         net (fo=19329, unset)        0.000     3.500    u_book/core_clk
+                         net (fo=19554, unset)        0.000     3.500    u_book/core_clk
                          FDSE                                         r  u_book/rescan_best_price_reg[18]/C
                          clock pessimism              0.000     3.500    
                          clock uncertainty           -0.035     3.465    

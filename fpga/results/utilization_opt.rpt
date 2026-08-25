@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 ---------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
-| Date         : Sat Aug 22 18:01:00 2026
+| Date         : Mon Aug 24 22:06:52 2026
 | Host         : ece006.ece.local.cmu.edu running 64-bit Red Hat Enterprise Linux release 8.10 (Ootpa)
 | Command      : report_utilization -file ./fpga/results/utilization_opt.rpt
 | Design       : tick2trade_top
@@ -32,16 +32,16 @@ Table of Contents
 +----------------------------+-------+-------+------------+-----------+-------+
 |          Site Type         |  Used | Fixed | Prohibited | Available | Util% |
 +----------------------------+-------+-------+------------+-----------+-------+
-| CLB LUTs*                  | 20383 |     0 |          0 |    230400 |  8.85 |
-|   LUT as Logic             |  3863 |     0 |          0 |    230400 |  1.68 |
+| CLB LUTs*                  | 20504 |     0 |          0 |    230400 |  8.90 |
+|   LUT as Logic             |  3984 |     0 |          0 |    230400 |  1.73 |
 |   LUT as Memory            | 16520 |     0 |          0 |    101760 | 16.23 |
 |     LUT as Distributed RAM | 16520 |     0 |            |           |       |
 |     LUT as Shift Register  |     0 |     0 |            |           |       |
-| CLB Registers              |  2837 |     0 |          0 |    460800 |  0.62 |
-|   Register as Flip Flop    |  2837 |     0 |          0 |    460800 |  0.62 |
+| CLB Registers              |  3062 |     0 |          0 |    460800 |  0.66 |
+|   Register as Flip Flop    |  3062 |     0 |          0 |    460800 |  0.66 |
 |   Register as Latch        |     0 |     0 |          0 |    460800 |  0.00 |
-| CARRY8                     |    95 |     0 |          0 |     28800 |  0.33 |
-| F7 Muxes                   |  7280 |     0 |          0 |    115200 |  6.32 |
+| CARRY8                     |   111 |     0 |          0 |     28800 |  0.39 |
+| F7 Muxes                   |  7306 |     0 |          0 |    115200 |  6.34 |
 | F8 Muxes                   |  3573 |     0 |          0 |     57600 |  6.20 |
 | F9 Muxes                   |  1040 |     0 |          0 |     28800 |  3.61 |
 +----------------------------+-------+-------+------------+-----------+-------+
@@ -64,8 +64,8 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 | 0     |          Yes |           - |            - |
 | 0     |          Yes |           - |          Set |
 | 0     |          Yes |           - |        Reset |
-| 67    |          Yes |         Set |            - |
-| 2770  |          Yes |       Reset |            - |
+| 99    |          Yes |         Set |            - |
+| 2963  |          Yes |       Reset |            - |
 +-------+--------------+-------------+--------------+
 
 
@@ -161,19 +161,19 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 +----------+------+---------------------+
 | RAMS64E1 | 8320 |                 CLB |
 | RAMD64E  | 8192 |                 CLB |
-| MUXF7    | 7280 |                 CLB |
+| MUXF7    | 7306 |                 CLB |
 | MUXF8    | 3573 |                 CLB |
-| FDRE     | 2770 |            Register |
-| LUT6     | 1862 |                 CLB |
+| FDRE     | 2963 |            Register |
+| LUT6     | 1897 |                 CLB |
 | MUXF9    | 1040 |                 CLB |
-| LUT3     | 1024 |                 CLB |
-| LUT4     |  768 |                 CLB |
-| LUT5     |  512 |                 CLB |
-| LUT2     |  430 |                 CLB |
-| CARRY8   |   95 |                 CLB |
-| FDSE     |   67 |            Register |
+| LUT3     | 1023 |                 CLB |
+| LUT4     |  830 |                 CLB |
+| LUT5     |  501 |                 CLB |
+| LUT2     |  497 |                 CLB |
+| CARRY8   |  111 |                 CLB |
+| FDSE     |   99 |            Register |
 | RAMD32   |   14 |                 CLB |
-| LUT1     |    8 |                 CLB |
+| LUT1     |    9 |                 CLB |
 | RAMS32   |    2 |                 CLB |
 +----------+------+---------------------+
 

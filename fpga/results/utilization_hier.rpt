@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 ---------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2024.1 (lin64) Build 5076996 Wed May 22 18:36:09 MDT 2024
-| Date         : Sat Aug 22 17:59:00 2026
+| Date         : Mon Aug 24 22:04:52 2026
 | Host         : ece006.ece.local.cmu.edu running 64-bit Red Hat Enterprise Linux release 8.10 (Ootpa)
 | Command      : report_utilization -hierarchical -file ./fpga/results/utilization_hier.rpt
 | Design       : tick2trade_top
@@ -22,16 +22,16 @@ Table of Contents
 +--------------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
 |      Instance      |      Module      | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | URAM | DSP Blocks |
 +--------------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
-| tick2trade_top     |            (top) |      20385 |       3865 |   16520 |    0 | 2837 |      0 |      0 |    0 |          0 |
-|   (tick2trade_top) |            (top) |          0 |          0 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
-|   u_book           |       order_book |      19869 |       3357 |   16512 |    0 | 1781 |      0 |      0 |    0 |          0 |
-|   u_csr            |   tick2trade_csr |        121 |        121 |       0 |    0 |  220 |      0 |      0 |    0 |          0 |
+| tick2trade_top     |            (top) |      20506 |       3986 |   16520 |    0 | 3062 |      0 |      0 |    0 |          0 |
+|   (tick2trade_top) |            (top) |         33 |         33 |       0 |    0 |  225 |      0 |      0 |    0 |          0 |
+|   u_book           |       order_book |      19835 |       3323 |   16512 |    0 | 1781 |      0 |      0 |    0 |          0 |
+|   u_csr            |   tick2trade_csr |        190 |        190 |       0 |    0 |  220 |      0 |      0 |    0 |          0 |
 |   u_deframer       | moldudp_deframer |        214 |        214 |       0 |    0 |  245 |      0 |      0 |    0 |          0 |
-|   u_fifo           |       async_fifo |         27 |         19 |       8 |    0 |   38 |      0 |      0 |    0 |          0 |
+|   u_fifo           |       async_fifo |         29 |         21 |       8 |    0 |   38 |      0 |      0 |    0 |          0 |
 |   u_parser         |      itch_parser |        191 |        191 |       0 |    0 |  455 |      0 |      0 |    0 |          0 |
 |     (u_parser)     |      itch_parser |         32 |         32 |       0 |    0 |  158 |      0 |      0 |    0 |          0 |
 |     sb             |      skid_buffer |        159 |        159 |       0 |    0 |  297 |      0 |      0 |    0 |          0 |
-|   u_signal         |     trade_signal |         39 |         39 |       0 |    0 |   98 |      0 |      0 |    0 |          0 |
+|   u_signal         |     trade_signal |         90 |         90 |       0 |    0 |   98 |      0 |      0 |    0 |          0 |
 +--------------------+------------------+------------+------------+---------+------+------+--------+--------+------+------------+
 
 
