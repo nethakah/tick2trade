@@ -277,3 +277,10 @@
 - Tried `phys_opt_design -directive AggressiveExplore` which recovered 0.014ns but that means placement was already near optimal.
 - Relaxed to 3.5ns, closing at +0.024ns, and the placer found a 9-level path instead of 10, so an improvement!
 - Final results: 288MHz, 3.476ns, 20229 LUTs (8.78%), 2836 FF (0.62%), 0 BRAM/URAM/DSP.
+
+### log-53: Routing vs Logic ceiling (2026-08-24)
+- Latency measuring added ~220 registers, still closing at 3.5ns with +0.034ns slack, 288 MHz.
+- The critical path is now different, from curr_level_reg to bid_levels LUTRAM write address. Zero logic levels, 0.080ns of gate delay, 3.188ns of wire, 97.6% routing.
+- The placer gave us "Very high fanout net 'curr_level_reg[0]_rep__19_n_0' ... fanout 1080." 1 reg bit has to reach 1080 LUTRAM address pins. 
+- No logic optimization fixes that because there is no logic, it's a distance problem, which comes back to the cost of writing a 640b wide memory of 1280 distributed RAM primitives (log-44).
+- 288 MHz is the ceiling using the memory architecture I made, not necessarily the ceiling for the logic. I suppose it's worth mentioning that narrowing the bucket to bit BRAM would collapse that fanout but it'd cost us the same 4 sequential reads per lookup we knew about before.
