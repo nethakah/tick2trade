@@ -109,6 +109,12 @@ module tick2trade_top
     logic[31:0] fire_latency_cycles; // cycles from final ingress byte to the most recent fire
     logic[31:0] fire_latency_min;
     logic[31:0] fire_latency_max;
+    logic[31:0] packet_begins_cycle; // cycle_count value at first byte of the packet
+    logic packet_moving; // stays high from first byte until tlast
+    logic[31:0] packet_latency_cycles; // first byte of the packet reaching core domain to fire
+                                       // NOT pipeline depth, moreso dominated by how long bytes take to arrive
+                                       // in TB this reflects DMA:core clock ratio; in hardware this reflects PS AXI-HP clock.
+
     logic[31:0] curr_latency;
     assign curr_latency = cycle_count - ingress_cycle;
 
@@ -119,14 +125,25 @@ module tick2trade_top
             fire_latency_cycles <= '0;
             fire_latency_min <= 32'hFFFFFFFF;
             fire_latency_max <= '0;
+            packet_begins_cycle <= '0;
+            packet_moving <= '0;
+            packet_latency_cycles <= '0;
         end
         else begin
             cycle_count <= cycle_count + 32'd1;
             if (deframer_in_tvalid && deframer_in_tready) begin
                 ingress_cycle <= cycle_count;
+                if (!packet_moving) begin
+                    packet_moving <= 1'b1;
+                    packet_begins_cycle <= cycle_count;
+                end
+                if (deframer_in_tlast) begin
+                    packet_moving <= '0;
+                end
             end
             if (order_fire) begin
                 fire_latency_cycles <= curr_latency;
+                packet_latency_cycles <= cycle_count - packet_begins_cycle;
                 if (curr_latency > fire_latency_max) begin
                     fire_latency_max <= curr_latency;
                 end
@@ -189,7 +206,8 @@ module tick2trade_top
         .level_collision_count(level_collision_count),
         .fire_latency_cycles(fire_latency_cycles),
         .fire_latency_min(fire_latency_min),
-        .fire_latency_max(fire_latency_max)
+        .fire_latency_max(fire_latency_max),
+        .packet_latency_cycles(packet_latency_cycles)
     );
 
     /* 

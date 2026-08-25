@@ -26,6 +26,7 @@ static constexpr uint32_t REG_STOCK_LOCATE = 0x14;
 static constexpr uint32_t REG_FIRE_LATENCY = 0x4C;
 static constexpr uint32_t REG_LATENCY_MIN = 0x50;
 static constexpr uint32_t REG_LATENCY_MAX = 0x54;
+static constexpr uint32_t REG_PACKET_LATENCY = 0x58;
 
 static uint64_t sim_time = 0;
 
@@ -388,9 +389,12 @@ static void test_end2end_fire(){
     check(dut->order_price, 1230500, "order has our limit");
     check(dut->order_shares, 100, "order has preloaded size");
 
-    uint32_t cycles = axi_read(dut, REG_FIRE_LATENCY);
-    std::printf("\ntick-to-signal: %u cycles (%.1f ns at 3.476ns/cycle)\n",
-                (unsigned)cycles, cycles*3.476);
+    uint32_t decision = axi_read(dut, REG_FIRE_LATENCY);
+    uint32_t ingest = axi_read(dut, REG_PACKET_LATENCY);
+    std::printf("\ndecision latency: %u cycles (%.1f ns) (pipeline reaction)\n", 
+                (unsigned)decision, decision*3.476);
+    std::printf("\ningest latency: %u cycles (%.1f ns) (including 96-byte ingest at testbench's DMA rate)\n", 
+                (unsigned)ingest, ingest*3.476);
 
     dut->final();
     delete dut;

@@ -34,6 +34,7 @@ static constexpr uint32_t REG_LEVEL_COLLISION = 0x48;
 static constexpr uint32_t REG_FIRE_LATENCY = 0x4C;
 static constexpr uint32_t REG_LATENCY_MIN = 0x50;
 static constexpr uint32_t REG_LATENCY_MAX = 0x54;
+static constexpr uint32_t REG_PACKET_LATENCY = 0x58;
 
 static void tick(Vtick2trade_csr *dut){
     REQUIRES(dut != nullptr);
@@ -70,6 +71,7 @@ static void reset(Vtick2trade_csr *dut){
     dut->fire_latency_cycles = 0;
     dut->fire_latency_min = 0xFFFFFFFF;
     dut->fire_latency_max = 0;
+    dut->packet_latency_cycles = 0;
 
     for (int i = 0; i < RESET_CYCLES; i++){
         tick(dut);
@@ -282,6 +284,7 @@ static void test_status_read(){
     dut->fire_latency_cycles = 42;
     dut->fire_latency_min = 42;
     dut->fire_latency_max = 47;
+    dut->packet_latency_cycles = 103;
 
     dut->eval();
 
@@ -297,6 +300,7 @@ static void test_status_read(){
     check(axi_read(dut, REG_PACKET_COUNT), 40, "packet_count");
     check(axi_read(dut, REG_GAP_COUNT), 6, "gap_count");
     check(axi_read(dut, REG_MISS_COUNT), 2, "miss_count");
+    check(axi_read(dut, REG_PACKET_LATENCY), 103, "packet_latency_cycles");
 
     //
     dut->final();

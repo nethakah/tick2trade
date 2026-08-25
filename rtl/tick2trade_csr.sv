@@ -58,7 +58,8 @@ module tick2trade_csr #(
     input logic[31:0] level_collision_count,
     input logic[31:0] fire_latency_cycles,
     input logic[31:0] fire_latency_min,
-    input logic[31:0] fire_latency_max
+    input logic[31:0] fire_latency_max,
+    input logic[31:0] packet_latency_cycles
 );
 
     // register map
@@ -82,6 +83,7 @@ module tick2trade_csr #(
     localparam logic[5:0] REG_FIRE_LATENCY = 6'h13; // R; cycles, most recent fire
     localparam logic[5:0] REG_LATENCY_MIN = 6'h14; // R; cycles, best latency we got
     localparam logic[5:0] REG_LATENCY_MAX = 6'h15; // R; cycles, worst latency we got
+    localparam logic[5:0] REG_PACKET_LATENCY = 6'h16; // R; cycles, packet from start to fire
     localparam logic[1:0] RESP_OKAY = 2'b00; // response code (tell master whether it worked)
 
     logic[5:0] write_index;
@@ -241,6 +243,9 @@ module tick2trade_csr #(
                     end
                     REG_LATENCY_MAX: begin
                         s_axi_rdata <= fire_latency_max;
+                    end
+                    REG_PACKET_LATENCY: begin
+                        s_axi_rdata <= packet_latency_cycles;
                     end
                     default: begin
                         s_axi_rdata <= '0;
