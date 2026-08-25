@@ -126,6 +126,7 @@ static void axi_write(
     bool b_done = false;
 
     for (int i = 0; i < max_time; i++){
+        tick(dut);
         if (core_rising()){
             if (!aw_done && dut->s_axi_awready){
                 aw_done = true;
@@ -137,7 +138,6 @@ static void axi_write(
                 b_done = true;
             }
         }
-        tick(dut);
 
         if (aw_done) dut->s_axi_awvalid = 0;
         if (w_done) dut->s_axi_wvalid = 0;
@@ -174,6 +174,7 @@ static uint32_t axi_read(
     bool r_done = false;
 
     for (int i = 0; i < max_time; i++){
+        tick(dut);
         if (core_rising()){
             if (!ar_done && dut->s_axi_arready){
                 ar_done = true;
@@ -184,7 +185,6 @@ static uint32_t axi_read(
             }
         }
 
-        tick(dut);
         if (ar_done) dut->s_axi_arvalid = 0;
         if (r_done) break;
     }
@@ -261,14 +261,39 @@ static void push_packet(
     REQUIRES(len > 0);
     //
 
-    for (size_t i = 0; i < len; i++){
-        push_byte(dut, packet[i], i==len-1);
+    size_t byte_index = 0;
+    dut->s_axis_tvalid = 1; // hold tvalid high for entire packet to make sure no gaps works
+    dut->s_axis_tdata = packet[0];
+    dut->s_axis_tlast = (len==1);
+
+    for (int t = 0; t < DMA_PERIOD*50*(int)len; t++){
+        tick(dut);
+        if (dma_rising() && dut->s_axis_tready){
+            byte_index++;
+            if (byte_index >= len){
+                break;
+            }
+            dut->s_axis_tdata = packet[byte_index];
+            dut->s_axis_tlast = (byte_index == len - 1);
+        }
     }
     dut->s_axis_tvalid = 0;
-
-    for (int i = 0; i < drain_time; i++){
+    if (len > byte_index){
+        std::printf("FAILED: was only able to accept %zu / %zu B\n", byte_index, len);
+        failures++;
+    }
+    for (int t = 0; t < drain_time; t++){
         tick(dut);
     }
+
+    // for (int i = 0; i < len; i++){
+    //     push_byte(dut, packet[i], i==len-1);
+    // }
+    // dut->s_axis_tvalid = 0;
+
+    // for (int i = 0; i < drain_time; i++){
+    //     tick(dut);
+    // }
 }
 
 // reset to baselines works
@@ -302,7 +327,7 @@ static void test_end2end_book(){
     bid.is_buy = true;
     bid.shares = 500;
     bid.stock = "AAPL";
-    bid.price = 1230000;
+    bid.price = 0x01020304;
 
     OrderAdd ask;
     ask.stock_locate = 1;
@@ -312,7 +337,7 @@ static void test_end2end_book(){
     ask.is_buy = false;
     ask.shares = 300;
     ask.stock = "AAPL";
-    ask.price = 1230500;
+    ask.price = 0x05060708;
 
     uint8_t itch_bid[ORDER_ADD_LEN];
     uint8_t itch_ask[ORDER_ADD_LEN];
@@ -327,14 +352,14 @@ static void test_end2end_book(){
     n += build_mold_msg(&packet[n], itch_ask, ORDER_ADD_LEN);
 
     push_packet(dut, packet, n);
-    check(dut->best_bid_price, 1230000, "best bid from raw bytes");
-    check(dut->best_ask_price, 1230500, "best ask from raw bytes");
+    check(dut->best_bid_price, 0x01020304, "best bid from raw bytes");
+    check(dut->best_ask_price, 0x05060708, "best ask from raw bytes");
     check(dut->best_bid_shares, 500, "best bid shares");
     check(dut->best_ask_shares, 300, "best ask shares");
     check(dut->packet_count, 1, "packet_count = 1");
     check(dut->gap_count, 0, "no gaps");
     check(dut->sequence_num, 1000, "seq num");
-    check(dut->spread, 500, "spread computed");
+    check(dut->spread, 0x04040404, "spread computed");
     check(dut->miss_count, 0, "no misses");
     check(dut->overflow_count, 0, "no overflow");
     check(dut->level_collision_count, 0, "no L2 level collisions");
