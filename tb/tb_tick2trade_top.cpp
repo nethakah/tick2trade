@@ -23,6 +23,9 @@ static constexpr uint32_t REG_ORDER_SHARES = 0x08;
 static constexpr uint32_t REG_SPREAD_MAX = 0x0C;
 static constexpr uint32_t REG_SIZE_MIN = 0x10;
 static constexpr uint32_t REG_STOCK_LOCATE = 0x14;
+static constexpr uint32_t REG_FIRE_LATENCY = 0x4C;
+static constexpr uint32_t REG_LATENCY_MIN = 0x50;
+static constexpr uint32_t REG_LATENCY_MAX = 0x54;
 
 static uint64_t sim_time = 0;
 
@@ -151,6 +154,52 @@ static void axi_write(
         std::printf("FAILED: tried to write to CSR (0x%02x) but never got a response\n", addr);
         failures++;
     }
+}
+
+static uint32_t axi_read(
+    Vtick2trade_top *dut,
+    uint32_t addr,
+    int max_time = CORE_PERIOD*100
+){
+    REQUIRES(dut != nullptr);
+    REQUIRES(dut->core_rst_n == 1);
+    //
+
+    dut->s_axi_araddr = addr & 0xFF;
+    dut->s_axi_arvalid = 1;
+    dut->s_axi_rready = 1;
+    uint32_t sample = 0;
+    bool ar_done = false;
+    bool r_done = false;
+
+    for (int i = 0; i < max_time; i++){
+        if (core_rising()){
+            if (!ar_done && dut->s_axi_arready){
+                ar_done = true;
+            }
+            if (dut->s_axi_rvalid){
+                sample = dut->s_axi_rdata;
+                r_done = true;
+            }
+        }
+
+        tick(dut);
+        if (ar_done) dut->s_axi_arvalid = 0;
+        if (r_done) break;
+    }
+
+    dut->s_axi_arvalid = 0;
+    for (int i = 0; i < CORE_PERIOD*2; i++){
+        tick(dut);
+    }
+    dut->s_axi_rready = 0;
+
+    if (!r_done){
+        std::printf("FAILED: tried to read from CSR (0x%02x) but it never returned data\n", addr);
+        failures++;
+    }
+    
+    return sample;
 }
 
 static void preload(
@@ -338,6 +387,10 @@ static void test_end2end_fire(){
     check(dut->order_side, 1, "buy side");
     check(dut->order_price, 1230500, "order has our limit");
     check(dut->order_shares, 100, "order has preloaded size");
+
+    uint32_t cycles = axi_read(dut, REG_FIRE_LATENCY);
+    std::printf("\ntick-to-signal: %u cycles (%.1f ns at 3.476ns/cycle)\n",
+                (unsigned)cycles, cycles*3.476);
 
     dut->final();
     delete dut;

@@ -31,6 +31,9 @@ static constexpr uint32_t REG_GAP_COUNT = 0x3C;
 static constexpr uint32_t REG_MISS_COUNT = 0x40;
 static constexpr uint32_t REG_OVERFLOW_COUNT = 0x44;
 static constexpr uint32_t REG_LEVEL_COLLISION = 0x48;
+static constexpr uint32_t REG_FIRE_LATENCY = 0x4C;
+static constexpr uint32_t REG_LATENCY_MIN = 0x50;
+static constexpr uint32_t REG_LATENCY_MAX = 0x54;
 
 static void tick(Vtick2trade_csr *dut){
     REQUIRES(dut != nullptr);
@@ -64,6 +67,9 @@ static void reset(Vtick2trade_csr *dut){
     dut->overflow_count = 0;
     dut->level_collision_count = 0;
     dut->gap_count = 0;
+    dut->fire_latency_cycles = 0;
+    dut->fire_latency_min = 0xFFFFFFFF;
+    dut->fire_latency_max = 0;
 
     for (int i = 0; i < RESET_CYCLES; i++){
         tick(dut);
@@ -273,9 +279,15 @@ static void test_status_read(){
     dut->miss_count = 2;
     dut->overflow_count = 0;
     dut->level_collision_count = 0;
+    dut->fire_latency_cycles = 42;
+    dut->fire_latency_min = 42;
+    dut->fire_latency_max = 47;
 
     dut->eval();
 
+    check(axi_read(dut, REG_FIRE_LATENCY), 42, "fire_latency_cycles");
+    check(axi_read(dut, REG_LATENCY_MIN), 42, "latency_min");
+    check(axi_read(dut, REG_LATENCY_MAX), 47, "latency_max");
     check(axi_read(dut, REG_BEST_BID_PRICE), 1230000, "best_bid_price");
     check(axi_read(dut, REG_BEST_BID_SHARES), 500, "best_bid_shares");
     check(axi_read(dut, REG_BEST_ASK_PRICE), 1230500, "best_ask_price");
