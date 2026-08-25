@@ -17,4 +17,4 @@ vivado_out/
 __MACOSX/
 clockInfo.txt
 *CongestedCLBsAndNets.txt
-tight_setup_hold_pins.txt
+tight_setup_hold_pins.txtfpga/ip/
