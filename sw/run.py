@@ -3,7 +3,7 @@ sudo -E python3 run.py
 '''
 
 from pynq import allocate, Overlay
-import numpy, time
+import numpy, time, os
 
 CORE_PERIOD_NS = 4.167 # 1/240 MHz
 
@@ -50,19 +50,35 @@ f.close()
 
 print(f'Loaded {len(data)} B from itch_data.bin')
 
+# gen_itch writes expected.txt so check if its there first
+expected = {}
+if os.path.exists('expected.txt'):
+    for line in open('expected.txt'):
+        key, value = line.split()
+        expected[key] = int(value)
+
 # return numpy array in physically contiguous mem
 buf = allocate(shape=(len(data),), dtype=numpy.uint8)
 
 # buf[:] so we assign into existing array instead of rebinding
 buf[:] = numpy.frombuffer(data, dtype=numpy.uint8)
 
+# 
+start = time.perf_counter()
 # write buffer's physical addr/len into DMA regs and start it
 dma.sendchannel.transfer(buf)
 # poll DMA status reg until done
 dma.sendchannel.wait()
+elapsed = time.perf_counter() - start
 
 # extra time since final bytes might still be crossing CDC/draining
-time.sleep(0.01)
+time.sleep(0.05)
+
+if len(data) > 10000:
+    ms = elapsed * 1000
+    mbps = len(data) / elapsed / 1000000
+    print()
+    print(f'DMA transfer: {len(data)} B in {ms:.2f}ms ({mbps:.1f}MB/s)')
 
 print()
 print(f'packet_count = {csr.read(REG_PACKET_COUNT)}')
@@ -81,6 +97,39 @@ print(f'level_collision = {csr.read(REG_LEVEL_COLLISION)}')
 cycles = csr.read(REG_FIRE_LATENCY)
 print()
 print(f'Decision latency: {cycles} cycles ({cycles * CORE_PERIOD_NS:.1f} ns)')
+
+if len(expected) > 0:
+    actual = dict()
+    actual['best_bid_price'] = csr.read(REG_BEST_BID_PRICE)
+    actual['best_bid_shares'] = csr.read(REG_BEST_BID_SHARES)
+    actual['best_ask_price'] = csr.read(REG_BEST_ASK_PRICE)
+    actual['best_ask_shares'] = csr.read(REG_BEST_ASK_SHARES)
+    actual['spread'] = csr.read(REG_SPREAD)
+    actual['miss_count'] = csr.read(REG_MISS_COUNT)
+    actual['packet_count'] = csr.read(REG_PACKET_COUNT)
+
+    failures = 0
+    print()
+    for k in expected:
+        fpga = actual[k]
+        model = expected[k]
+        if fpga != model:
+            print(f'Mismatch on key = {k}; hardware = {fpga}; model = {model}')
+            failures += 1
+
+    overflow = csr.read(REG_OVERFLOW_COUNT)
+    if overflow != 0:
+        print(f'ERROR: overflow_count = {overflow}; lower MAX_LIVE_ORDERS to fix this')
+        failures += 1
+    gaps = csr.read(REG_GAP_COUNT)
+    if gaps != 0:
+        print(f'ERROR: gap_count = {gaps}; deframer lost the sequence')
+        failures += 1
+
+    if failures == 0:
+        print('PASSED!')
+    else:
+        print(f'FAILED ({failures} mismatches)')
 
 # free the block we were using
 buf.freebuffer()
