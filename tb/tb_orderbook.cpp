@@ -9,6 +9,9 @@ verilator --cc --exe --build -j 0  --assert +define+SIM --top-module order_book 
 #include <cstdio>
 #include <cstdint>
 #include "contracts.hpp"
+#include <vector>
+#include "book_model.hpp"
+#include <cstdlib>
 
 static int failures = 0;
 static constexpr int RESET_CYCLES = 5;
@@ -343,6 +346,103 @@ static void test_lifecycle(){
 
     dut->final();
     delete dut;
+}
+
+static std::vector<uint64_t> live_refs;
+static constexpr size_t MAX_LIVE_ORDERS = 300;
+static constexpr uint32_t PRICE_BASE = 1230000;
+static constexpr uint32_t PRICE_SPAN = 20;
+
+static void forget_ref(uint64_t ref){
+    for (size_t i = 0; i < live_refs.size(); i++){
+        if (ref == live_refs[i]){
+            // swap w last elem + pop
+            live_refs[i] = live_refs.back();
+            live_refs.pop_back();
+            return;
+        }
+    }
+}
+
+static void test_random_against_model(int num_msgs, unsigned int seed){
+    std::printf("TEST12: %d random messages against the reference model\n", num_msgs);
+    Vorder_book *dut = fresh_dut();
+    BookModel model;
+
+    live_refs.clear();
+    uint64_t next_ref = 1;
+    srand(seed);
+
+    for (int n = 0; n < num_msgs; n++){
+        int x = rand() % 100;
+
+        if (live_refs.empty()){
+            x = 0;
+        }
+        else if (x<50 && live_refs.size()>=MAX_LIVE){
+            x = 50;
+        }
+
+        if (x < 50){
+            // add
+            uint64_t ref = next_ref++;
+            bool is_buy = (rand() % 2) == 0;
+            uint32_t price = PRICE_BASE + (rand() % PRICE_SPAN);
+            uint32_t shares = 1 + (rand() % 1000);
+
+            push_msg(dut, MSG_ADD, is_buy, 1, ref, shares, price);
+            model.add_order(ref, is_buy, price, shares);
+            live_refs.push_back(ref);
+        }
+        else if (x < 75){
+            // exc
+            size_t i = rand() % live_refs.size();
+            uint64_t ref = live_refs[i];
+            uint32_t shares = 1 + (rand() % 1200);
+            
+            push_msg(dut, MSG_EXC, false, 1, ref, shares, 0);
+            model.exc_order(ref, shares);
+
+            if (!model.has_order(ref)){
+                forget_ref(ref);
+            }
+        }
+        else if (x < 90){
+            // del
+            size_t i = rand() % live_refs.size();
+            uint64_t ref = live_refs[i];
+
+            push_msg(dut, MSG_DEL, false, 1, 0, 0);
+            model.del_order(ref);
+             
+            forget_ref(ref);
+        }
+        else{
+            // miss
+            uint64_t ref = next_ref + 1000000; // go far past anything issued
+            if (rand() % 2){
+                push_msg(dut, MSG_EXC, false, 1, ref, 100, 0);
+                model.exc_order(ref, 100);
+            }
+            else{
+                push_msg(dut, MSG_DEL, false, 1, ref, 0, 0);
+                model.del_order(ref);
+            }
+        }
+
+        if (dut->best_bid_price != model.best_bid_price() || 
+            dut->best_bid_shares != model.best_bid_shares() ||
+            dut->best_ask_price != model.best_ask_price() ||
+            dut->best_ask_shares != model.best_ask_shares() ||
+            dut->miss_count != model.get_miss_count()){
+            
+            std::printf("FAILED! message: %d (seed: %u)", n, seed);
+            // add more print statements for values to debug
+
+            failures++;
+            break;
+        }
+    }
 }
 
 int main(int argc, char **argv){
