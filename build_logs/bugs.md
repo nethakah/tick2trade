@@ -68,3 +68,12 @@ Linting: `verilator --lint-only -Wall --top-module modulename rtl/msg_pkg.sv rtl
 - Symptom: full design linted and verified in Verilator, but Vivado failing at elaboration: "net type must be explicitly specified for 'clk' when default_nettype is none."
 - Cause: `logic` is a data type not a net type. We put default net type to `none` and Vivado doesn't accept it; outputs were fine but not the input declarations.
 - Fix: removed the directive. I think we could also do `input wire` but things were fine without the default net type (it just would make errors look a bit cleaner), so I removed it. 
+
+### bug-13: Order prices corrupted in hardware
+- Symptom: `best_bid_price` and `best_ask_price` wrong on board. Sent 0x01020304 and read back 0x01010301 and then 0x01010201 on the run after that meaning different values each run. The other fields were fine.
+- Tried Verilator again with some back-to-back edits to make sure we weren't missing cases, and it still passed with identical bytes under the identical scenario. Which I confirmed via a hex dump.
+- Realized the actual issue to notice was the variance between consequent runs because this wasn't detemrinistic at all - meaning Verilator can't catch it since we can't look at analog behavior or metastability in the pure software context.
+- The problems:
+    1. Placer was free to put q1 and q2 signals far apart, which caused wire delay that interfered with the whole point of that second flop design (to give metastability a full clock to settle).
+    2. `tick2trade.xdc` has `set_clock_groups -asynchronous` but `package_ip.tcl` packages `rtl/*.sv` only. Hence the constraint file never even reached the block design, which it needs to see.
+- 
