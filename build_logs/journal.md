@@ -286,4 +286,37 @@
 - 288 MHz is the ceiling using the memory architecture I made, not necessarily the ceiling for the logic. 
 - I suppose it's worth mentioning that narrowing the bucket to bit BRAM would collapse that fanout but it'd cost us the same 4 sequential reads per lookup we knew about before.
 
-### log-54
+### log-54: Packaged RTL with IP (2026-08-25)
+- Need an IP to work with block design, which is what `package_ip.tcl` is for - wraps all `rtl/*.sv` into `fpga/ip/`.
+- AXI4-Stream and AXI-Lite work accordingly via port name prefixes.
+- `ipx::associate_bus_interfaces` was also needed so validation wouldn't complain about AXI interfaces, pairing s_axis to dma_clk and s_axi to core_clk fine.
+
+### log-55: Block design; PS+DMA+tick2trade (2026-08-25)
+- Zynq PS with ZCU104 preset, AXI-DMA in simple mode, and the IP packaged previously.
+- There's 2 PL clocks so CDC functions on hardware: pl_clk0 at 100 MHz for DMA and AXI infra, and then pl_clk1 for core clock.
+- Addr map: axi_dma S_AXI_LITE at 0xA000_0000; tick2trade s_axi at 0xA001_0000.
+- Small thing to note is that the board preset version was 1.1 so make sure it lines up (`get_board_parts`).
+- The ZCU104 preset seemed to also turn on M_AXI_GP1 or something of that sort which I don't use so I disabled that so we don't fail validation.
+
+### log-56: Bring-up on the real ZCU104 (2026-08-25)
+- PYNQ 3.1.1 was used; also `sudo -E python3` before running the python script so we keep the environment and sudo finds PYNQ's venv.
+- CSR test passed fine and read back perfectly.
+- Added `sw/gen_itch.cpp` to reproduce packet file using builders I already wrote in the testbench (`tb/itch_messages.hpp`). Compiled it on the board directly.
+- `sw/run.py` is the main script here: programs the PL, configures over AXI-Lite, allocates DMA buffer, transfers, and reads counters.
+- I found it kinda difficult when figuring out the architecture with PYNQ to understand `allocate()`, so just as a note to self, the normal numpy array lives in virtual memory which the OS might scatter but we need one contiguous physical region for this. Hence, I thought this would be just as easy in C, but quickly realized that is just not the case, since malloc() and similar functions do not let me do what I need here.
+
+### log-57: Prices corrupted on hardware run (2026-08-25)
+- Check bug-13; caused me a lot of problems and hours of debugging to be honest but quite a minor fix.
+
+### log-58: 240 MHz in-system (2026-08-26)
+- With CDC constraint working finally, critical path was book_mem again, same LUTRAM port as log-53.
+- I tried 250 MHz but ended up with -0.152ns slack, so it missed. It's interesting since OOC closed 288 MHz so I figured 250 would actually leave a lot of positive slack but it did not. I believe this comes down to the fact that the PS occupies a fixed corner which the DMA has to reach and then my book is just pushed into what's left so those 1280 LUTRAM primitives spread far apart. From testing things, my path is 97% routing so it is obviously going to be the most likely to have congestion problems in the entire design.
+- Ended up dropping pl_clk1 to 240 MHz, hoping it'd pass marginally and then drop to 235 MHz to have a safer amount of slack. Surprisingly, came back with +0.125ns, probably because relaxing gave the placer room and the path was faster like in log-50.
+- Key results: WNS +0.125ns; WHS +0.010ns; 0 critical warnings.
+
+### log-59: Measured on hardware (2026-08-26)
+- Tested with: fire_count=1, best_bid=1230000, best_ask=1230500, spread=500, and every counter matching TEST3.
+- Decision latency 8 cycles like with Verilator. So at 240 MHz, should be approximately 33ns from final byte of ITCH message to the `order_fire`.
+- The simulation gave me 27.8ns but obviously that's against the 288 MHz Fmax which is standalone/OOC. So to compare, it's just the cycle count to look at, not nanoseconds.
+- Block design utilization ended up at 21,536 LUTs (9.35%) and 1 BRAM (including the PS, DMA, interconnects). BRAM was the DMA's internal FIFO, so the project is still 0 BRAM like during simulation.
+- This was just 1 packet though (96 B) and the FIFO didn't fill so this is quite a trivial testrun. Next up is doing a golden reference model and a randomized stream through the DMA.
