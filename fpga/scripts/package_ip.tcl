@@ -17,8 +17,7 @@ add_files -norecurse {
 }
 
 # xdc needs to go with the ip so we set_clock_groups -asynchronous so vivado knows dma/core clk are unrelated
-add_files -fileset constrs_1 -norecurse fpga/constraints/tick2trade.xdc
-set_property used_in_synthesis false [get_files fpga/constraints/tick2trade.xdc]
+add_files -fileset constrs_1 -norecurse fpga/constraints/tick2trade_cdc.xdc
 
 # set top file property for vivado to know which of 9 it is
 set_property top tick2trade_top [current_fileset]
