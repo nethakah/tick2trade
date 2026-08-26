@@ -16,12 +16,6 @@ add_files -norecurse {
     rtl/tick2trade_top.sv
 }
 
-# xdc needs to go with the ip so we set_clock_groups -asynchronous so vivado knows dma/core clk are unrelated
-add_files -fileset constrs_1 -norecurse fpga/constraints/tick2trade_cdc.xdc
-
-# ip constraints were getting parsed before PS defines its clocks so defer it til everything else runs
-set_property PROCESSING_ORDER LATE [get_files fpga/constraints/tick2trade_cdc.xdc]
-
 # set top file property for vivado to know which of 9 it is
 set_property top tick2trade_top [current_fileset]
 update_compile_order -fileset sources_1
