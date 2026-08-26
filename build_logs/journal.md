@@ -320,3 +320,9 @@
 - The simulation gave me 27.8ns but obviously that's against the 288 MHz Fmax which is standalone/OOC. So to compare, it's just the cycle count to look at, not nanoseconds.
 - Block design utilization ended up at 21,536 LUTs (9.35%) and 1 BRAM (including the PS, DMA, interconnects). BRAM was the DMA's internal FIFO, so the project is still 0 BRAM like during simulation.
 - This was just 1 packet though (96 B) and the FIFO didn't fill so this is quite a trivial testrun. Next up is doing a golden reference model and a randomized stream through the DMA.
+
+### log-60: Randomized regression against golden model (2026-08-26)
+- Added `tb/book_model.hpp` which is a model of the book in C++ using `std::map` instead of hashing and no capacity limit.
+- TEST12 does 20,000 messages into both to compare every message.
+- First time had a crossed market (flagged by SVA) because I set it up so it picks price and side independently from a range but that means bid could be above an ask. Fixed that by splitting the price range using `PRICE_BASE`.
+- Overflow probably will need its own test. Here I just capped live orders at 300 so there's no overflow in the buckets.

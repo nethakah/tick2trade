@@ -379,7 +379,7 @@ static void test_random_against_model(int num_msgs, unsigned int seed){
         if (live_refs.empty()){
             x = 0;
         }
-        else if (x<50 && live_refs.size()>=MAX_LIVE){
+        else if (x<50 && live_refs.size()>=MAX_LIVE_ORDERS){
             x = 50;
         }
 
@@ -387,8 +387,16 @@ static void test_random_against_model(int num_msgs, unsigned int seed){
             // add
             uint64_t ref = next_ref++;
             bool is_buy = (rand() % 2) == 0;
-            uint32_t price = PRICE_BASE + (rand() % PRICE_SPAN);
+            
             uint32_t shares = 1 + (rand() % 1000);
+            uint32_t price;
+            // make sure we dont randomly pick a crossed market
+            if (is_buy){
+                price = PRICE_BASE - 1 - (rand() % PRICE_SPAN);
+            }
+            else{
+                price = PRICE_BASE + (rand() % PRICE_SPAN);
+            }
 
             push_msg(dut, MSG_ADD, is_buy, 1, ref, shares, price);
             model.add_order(ref, is_buy, price, shares);
@@ -412,7 +420,7 @@ static void test_random_against_model(int num_msgs, unsigned int seed){
             size_t i = rand() % live_refs.size();
             uint64_t ref = live_refs[i];
 
-            push_msg(dut, MSG_DEL, false, 1, 0, 0);
+            push_msg(dut, MSG_DEL, false, 1, ref, 0, 0);
             model.del_order(ref);
              
             forget_ref(ref);
@@ -436,13 +444,31 @@ static void test_random_against_model(int num_msgs, unsigned int seed){
             dut->best_ask_shares != model.best_ask_shares() ||
             dut->miss_count != model.get_miss_count()){
             
-            std::printf("FAILED! message: %d (seed: %u)", n, seed);
-            // add more print statements for values to debug
+            std::printf("FAILED! message: %d (seed: %u)\n", n, seed);
+            std::printf("Bid price; dut %u; model %u\n",
+                        (unsigned)dut->best_bid_price, (unsigned)model.best_bid_price());
+            std::printf("Bid shares; dut %u; model %u\n",
+                        (unsigned)dut->best_bid_shares, (unsigned)model.best_bid_shares());
+            std::printf("Ask price; dut %u; model %u\n",
+                        (unsigned)dut->best_ask_price, (unsigned)model.best_ask_price());
+            std::printf("Ask shares; dut %u; model %u\n",
+                        (unsigned)dut->best_ask_shares, (unsigned)model.best_ask_shares());
+            std::printf("miss_count; dut %u; model %u\n",
+                        (unsigned)dut->miss_count, (unsigned)model.get_miss_count());
+            std::printf("live orders %zu; overflow_count %u\n",
+                        live_refs.size(), (unsigned)dut->overflow_count);
+            
 
             failures++;
             break;
         }
     }
+    check(dut->overflow_count, 0, "no overflow");
+    check(dut->level_collision_count, 0, "no level collisions");
+
+    //
+    dut->final();
+    delete dut;
 }
 
 int main(int argc, char **argv){
@@ -459,6 +485,9 @@ int main(int argc, char **argv){
     test_del_leaves_level_existing();
     test_del_unknown_ref_counts_miss();
     test_lifecycle();
+    test_random_against_model(10000, 12345);
+    test_random_against_model(10000, 11111);
+    test_random_against_model(10000, 9);
 
     std::printf("\n%s (Failures: %d)\n",
                 failures ? "FAILED" : "PASSED", failures);
