@@ -1,3 +1,7 @@
+# Requires packaged IP first:
+#    set_property ip_repo_paths <repo>/fpga/ip [current_project]
+#    update_ip_catalog
+# Regenerate with fpga/scripts/package_ip.tcl
 
 ################################################################
 # This is a generated script based on design: tick2trade_bd
@@ -131,7 +135,7 @@ set bCheckIPs 1
 if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
 xilinx.com:ip:axi_dma:7.1\
-cmu:user:tick2trade_top:1.0\
+tick2trade:user:tick2trade_top:1.0\
 xilinx.com:ip:zynq_ultra_ps_e:3.5\
 xilinx.com:ip:proc_sys_reset:5.0\
 "
@@ -211,7 +215,7 @@ proc create_root_design { parentCell } {
 
 
   # Create instance: tick2trade, and set properties
-  set tick2trade [ create_bd_cell -type ip -vlnv cmu:user:tick2trade_top:1.0 tick2trade ]
+  set tick2trade [ create_bd_cell -type ip -vlnv tick2trade:user:tick2trade_top:1.0 tick2trade ]
 
   # Create instance: zynq_ps, and set properties
   set zynq_ps [ create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.5 zynq_ps ]

@@ -285,3 +285,5 @@
 - There's not really any logic optimization fixes now because there is no logic, it's actually just a distance problem, which comes back to the cost of writing a 640b wide memory of 1280 distributed RAM primitives (mentioned in my log-44).
 - 288 MHz is the ceiling using the memory architecture I made, not necessarily the ceiling for the logic. 
 - I suppose it's worth mentioning that narrowing the bucket to bit BRAM would collapse that fanout but it'd cost us the same 4 sequential reads per lookup we knew about before.
+
+### log-54

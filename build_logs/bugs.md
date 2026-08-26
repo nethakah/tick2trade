@@ -76,4 +76,13 @@ Linting: `verilator --lint-only -Wall --top-module modulename rtl/msg_pkg.sv rtl
 - The problems:
     1. Placer was free to put q1 and q2 signals far apart, which caused wire delay that interfered with the whole point of that second flop design (to give metastability a full clock to settle).
     2. `tick2trade.xdc` has `set_clock_groups -asynchronous` but `package_ip.tcl` packages `rtl/*.sv` only. Hence the constraint file never even reached the block design, which it needs to see.
-- 
+- Fixes:
+    1. `(* ASYNC_REG = "TRUE" *)` on all 4 gray pointer synchronizing registers which makes the placer keep each q1/q2 pair together in 1 slice.
+    2. Split constraints up. Kept `tick2trade.xdc` with `create_clock` for the out-of-context (vivado synthesis) runs, and then added `tick2trade_bd.xdc` for the block design which simply sets `set_clock_groups -asynchronous`.
+- Verified this result works by rewriring block design so both of the clocks are coming from pl_clk0 and then ran it 3 times - all of which returned exactly what it should. 
+- Big thing to remember here is Verilator doesn't catch stuff like this.
+
+### bug-14: Sampled outputs before eval() instead of after
+- Symptom: I'd just rewrote `push_packet()` to hodl `tvalid` across the whole packet and it broke some tests.
+- Cause: The helper functions checked handshake signals before calling tick(), but we know tick() advances sim_time and calls eval() so doing that handshake-check first means we read the previous time step and dma/core_rising() test the old sim_time.
+- Fix: tick(), then sample. For `push_packet`, `axi_write`, `axi_read`.
