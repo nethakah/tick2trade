@@ -32,10 +32,12 @@ module async_fifo #(
     logic[ADDR_WIDTH:0] w_ptr_gray;
     logic[ADDR_WIDTH:0] r_ptr_gray;
 
-    logic[ADDR_WIDTH:0] r_ptr_gray_q1;
-    logic[ADDR_WIDTH:0] r_ptr_gray_q2;
-    logic[ADDR_WIDTH:0] w_ptr_gray_q1;
-    logic[ADDR_WIDTH:0] w_ptr_gray_q2;
+    // ASYNC_REG to keep each q1/q2 pair in same slice on the board
+    // bug-13's first issue is here bc without this we get wire delay
+    (* ASYNC_REG = "TRUE" *) logic[ADDR_WIDTH:0] r_ptr_gray_q1;
+    (* ASYNC_REG = "TRUE" *) logic[ADDR_WIDTH:0] r_ptr_gray_q2;
+    (* ASYNC_REG = "TRUE" *) logic[ADDR_WIDTH:0] w_ptr_gray_q1;
+    (* ASYNC_REG = "TRUE" *) logic[ADDR_WIDTH:0] w_ptr_gray_q2;
 
     logic[ADDR_WIDTH:0] w_ptr_bnry_next;
     logic[ADDR_WIDTH:0] r_ptr_bnry_next;
