@@ -471,6 +471,29 @@ static void test_random_against_model(int num_msgs, unsigned int seed){
     delete dut;
 }
 
+static void test_bucket_overflow(){
+    std::printf("TEST13: 5th order in 1 bucket should cause overflow\n");
+    Vorder_book *dut = fresh_dut();
+
+    uint64_t refs[5] = {7, 1031, 2055, 3079, 4103};
+    for (int i = 0; i < 4; i++){
+        push_msg(dut, MSG_ADD, true, 1, refs[i], 100, 1230000 - i);
+    }
+
+    check(dut->overflow_count, 0, "4/4 fit");
+    check(dut->best_bid_price, 1230000, "best bid from the first add");
+    check(dut->best_bid_shares, 100, "corresponding shares");
+    push_msg(dut, MSG_ADD, true, 1, refs[4], 987, 1231000);
+    check(dut->overflow_count, 1, "5th order overflows");
+    check(dut->best_bid_price, 1230000, "dropped order doesn't reach book");
+    push_msg(dut, MSG_DEL, false, 1, refs[0], 0, 0);
+    check(dut->miss_count, 0, "first order findable after overflow");
+    check(dut->best_bid_price, 1229999, "2nd best got promoted");
+
+    dut->final();
+    delete dut;
+}
+
 int main(int argc, char **argv){
     Verilated::commandArgs(argc, argv);
 
@@ -488,6 +511,7 @@ int main(int argc, char **argv){
     test_random_against_model(10000, 12345);
     test_random_against_model(10000, 11111);
     test_random_against_model(10000, 9);
+    test_bucket_overflow();
 
     std::printf("\n%s (Failures: %d)\n",
                 failures ? "FAILED" : "PASSED", failures);

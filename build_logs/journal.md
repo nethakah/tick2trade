@@ -325,4 +325,4 @@
 - Added `tb/book_model.hpp` which is a model of the book in C++ using `std::map` instead of hashing and no capacity limit.
 - TEST12 does 20,000 messages into both to compare every message.
 - First time had a crossed market (flagged by SVA) because I set it up so it picks price and side independently from a range but that means bid could be above an ask. Fixed that by splitting the price range using `PRICE_BASE`.
-- Overflow probably will need its own test. Here I just capped live orders at 300 so there's no overflow in the buckets.
+- TEST13 covers overflow of the buckets, which mirrors hash_order_ref to pick refs that land in bucket 7. 
