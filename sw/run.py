@@ -57,18 +57,33 @@ if os.path.exists('expected.txt'):
         key, value = line.split()
         expected[key] = int(value)
 
-# return numpy array in physically contiguous mem
-buf = allocate(shape=(len(data),), dtype=numpy.uint8)
+def split_packets(data):
+    packets = []
+    pos = 0
+    while pos < len(data):
+        packet_start = pos
+        msg_count = int.from_bytes(data[pos+18:pos+20], 'big')
+        pos += 20
 
-# buf[:] so we assign into existing array instead of rebinding
-buf[:] = numpy.frombuffer(data, dtype=numpy.uint8)
+        for i in range(msg_count):
+            msg_len = int.from_bytes(data[pos:pos+2], 'big')
+            pos += 2 + msg_len
 
-# 
+        packets.append(data[packet_start:pos])
+    return packets
+
+packets = split_packets(data)
+largest = max(len(p) for p in packets)
+print(f'{len(packets)} packets; largest packet is {largest} B')
+
+buf = allocate(shape=(largest,), dtype=numpy.uint8)
+
 start = time.perf_counter()
-# write buffer's physical addr/len into DMA regs and start it
-dma.sendchannel.transfer(buf)
-# poll DMA status reg until done
-dma.sendchannel.wait()
+for p in packets:
+    # copy into front of buffer + transfer ensuring tlast lands on packet boundary
+    buf[0:len(p)] = numpy.frombuffer(p, dtype=numpy.uint8)
+    dma.sendchannel.transfer(buf[0:len(p)])
+    dma.sendchannel.wait()
 elapsed = time.perf_counter() - start
 
 # extra time since final bytes might still be crossing CDC/draining
