@@ -2,11 +2,11 @@
 
 `SystemVerilog` · `Verilator` · `Vivado 2024.1` · `PYNQ` · `Xilinx ZCU104 (xczu7ev)`
 
-NASDAQ ITCH 5.0 market data pipeline in FPGA fabric. MoldUDP64 packets in over
-AXI4-Stream, limit order book reconstructed in hardware, and a preloaded order
-fires when the book hits conditions software set in advance.
+NASDAQ ITCH 5.0 market data pipeline for FPGA: MoldUDP64 packets in over
+AXI4-Stream, limit order book reconstructed on-chip, and a preloaded order fires
+when the book hits conditions software set in advance via AXI-Lite.
 
-Every number here is measured on the board.
+Every number here is measured on the actual board:
 
 | | |
 | :-- | :-- |
@@ -18,8 +18,8 @@ Every number here is measured on the board.
 | BRAM / URAM / DSP | 0 / 0 / 0 |
 
 Decision latency is last byte of the ITCH message to `order_fire` asserting. The
-fabric timestamps itself and reports over AXI-Lite, since software can't time a
-33 ns event. Verilator reports the same 8 cycles.
+fabric timestamps itself and reports over AXI-Lite. Verilator reports the same 8
+cycles.
 
 ```
 DDR4 → AXI-DMA → async_fifo → moldudp_deframer → itch_parser → order_book → trade_signal
@@ -28,10 +28,15 @@ DDR4 → AXI-DMA → async_fifo → moldudp_deframer → itch_parser → order_b
                                           tick2trade_csr (AXI-Lite from the PS)
 ```
 
-The order book is three levels, all LUTRAM. L3 hashes `order_ref_num` into 1024
-buckets 4 wide, compared in parallel so lookup is constant latency. L2 is a price
-ladder per side. L1 is best bid and ask. Buckets are 640 bits and BRAM is 72 bits
-per port, so BRAM would have meant 4 sequential reads per lookup.
+The order book is three levels, all LUTRAM.
+
+- L3 hashes `order_ref_num` into 1024 buckets 4 wide, all compared in the same
+  cycle, so lookup is a fixed number of cycles no matter how many collide.
+- L2 is a price ladder per side (buy/sell).
+- L1 is best bid and ask.
+
+Buckets are 640 bits and BRAM is 72 bits per port, so BRAM would have meant 4
+sequential reads per lookup.
 
 ## Layout
 
@@ -80,34 +85,46 @@ book one message at a time, so it never backpressured and never dropped anything
 Requires Verilator, and Vivado 2024.1 for the board flow.
 
 1. Simulate:
+
 ```
     bash scripts/lint.sh
 ```
+
 2. Out-of-context synth and impl:
+
 ```
     bash scripts/synth.sh
     bash scripts/impl.sh
 ```
+
 3. Package the RTL as IP (`fpga/ip/` is generated and gitignored):
+
 ```
     vivado -mode batch -source fpga/scripts/package_ip.tcl
 ```
+
 4. In Vivado, with `ip_repo_paths` pointed at `fpga/ip/`:
+
 ```
     source fpga/scripts/create_bd.tcl
     add_files -fileset constrs_1 fpga/constraints/tick2trade_bd.xdc
 ```
+
     `create_bd.tcl` does NOT carry that constraint file. Skip it and you get a
-    bitstream with no CDC constraint and bug-13 comes back, silently.
+    bitstream with no CDC constraint, and bug-13 comes straight back.
+
 5. Generate the bitstream, then:
+
 ```
     bash sw/deploy.sh user@board
 ```
+
     Board instructions in [sw/README.md](sw/README.md).
 
 ## Roadmap
 
-### Primary Design
+Part 1:
+
 - [x] MoldUDP64 deframer with sequence gap detection
 - [x] ITCH 5.0 parser (Add / Executed / Delete)
 - [x] Three-level order book in LUTRAM
@@ -115,10 +132,16 @@ Requires Verilator, and Vivado 2024.1 for the board flow.
 - [x] Golden reference model and randomized regression
 - [x] Running on ZCU104 over AXI-DMA
 
-### Part 2
-- [ ] ASIC flow with Genus/Innovus to find PPA in SRAM over LUTRAM
+Part 2:
+
+- [ ] ASIC flow with Genus/Innovus to find PPA in SRAM instead of LUTRAM
 - [ ] Replay real NASDAQ ITCH dumps
 - [ ] Scatter-gather DMA for a real throughput number
 - [ ] Ethernet front end, so it's wire-to-trade
-- [ ] Multi-symbol functionality
+- [ ] Multi-symbol
 - [ ] Other ITCH 5.0 message types besides A/E/D
+
+## Log
+
+`build_logs/journal.md` is what I tried and why, `build_logs/bugs.md` is
+symptom / cause / fix.
