@@ -86,3 +86,10 @@ Linting: `verilator --lint-only -Wall --top-module modulename rtl/msg_pkg.sv rtl
 - Symptom: I'd just rewrote `push_packet()` to hodl `tvalid` across the whole packet and it broke some tests.
 - Cause: The helper functions checked handshake signals before calling tick(), but we know tick() advances sim_time and calls eval() so doing that handshake-check first means we read the previous time step and dma/core_rising() test the old sim_time.
 - Fix: tick(), then sample. For `push_packet`, `axi_write`, `axi_read`.
+
+### bug-15: Parser dropping ITCH messages during book backpressure
+- Symptom: once I got to the hardware and comparing with the reference model, everything was working fine except `miss_count` which disagreed with the model. 
+- Cause: `itch_parser.sv` was clearing `fsm_tvalid` unconditionally every cycle, but it needed to only clear when skid buffer accepted. It was confusing because I tried to implement that fix beforehand when I had issues but it was put in the reset branch. Somehow that worked for whatever bug I had previously, but now it's clear it should be in the `else` branch.
+- In hindsight, I suppose the book state still matched because dropping an added order whose order is later deleted doesn't alter the book, just adds to `miss_count`.
+- I thought SVA would catch this to be honest but the stability assertion was on `m_axis_tvalid` for the skid buffer's output while the drop happened on the input (`fsm_tvalid`).
+- Fix: clear only on `if (fsm_tvalid && fsm_tready)`.

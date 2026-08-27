@@ -326,3 +326,22 @@
 - TEST12 does 20,000 messages into both to compare every message.
 - First time had a crossed market (flagged by SVA) because I set it up so it picks price and side independently from a range but that means bid could be above an ask. Fixed that by splitting the price range using `PRICE_BASE`.
 - TEST13 covers overflow of the buckets, which mirrors hash_order_ref to pick refs that land in bucket 7. 
+
+### log-61: Clean rebuild (2026-08-26)
+- Tested rebuilding from an empty directory via the commited scripts in this repo.
+```
+create_project t2t_clean
+set_property ip_repo_paths <repo>/fpga/ip
+update_ip_catalog
+source fpga/scripts/create_bd.tcl
+```
+- Worked perfectly with 0 errors and 0 critical warnings.
+- Interesting though WNS was +0.043ns instead of +0.125ns from what I hand-built before this. Makes sense though since placement isn't deterministic when we do it like this.
+- Small problem is rebuilding from `create_bd.tcl` reintroduces the CDC constraint issue (bug-13) so we do need to still have `tick2trade_bd.xdc`.
+
+### log-62: Hardware regression + debug (2026-08-26)
+- First thing I wanted to do was get some more randomization in since a lot of testing thus far has been quite fixed. So I extended `gen_itch.cpp` with `N` random messages using same mix as TEST12 and packed 50 per moldudp64 packet. Here, also we write `expected.txt` in the `sw/` directory with the final book state and `miss_count` which `run.py` compares against the CSR after the DMA.
+- Everything matched except `miss_count`. See bug-15 for my troubles figuring that one out. After bug-15, everything matched and passed!
+- Rebuilt clean with the RTL fix for `itch_parser.sv` and ended up with WNS of +0.130ns.
+- This basically closes the project for now. 20k messages through DDR4, DMA, CDC, deframer, parser, book, signal - all matching a model with separate data structures.
+- What's left to do: real NASDAQ ITCH data, get a true throughput number in hardware, set up an Ethernet front end so it's "wire2trade" like HFT, more randomized regression testing. If I'm feeling ambitious someday maybe multi-symbol functionality, but having measured ~64Mb for 100 symbols, that'd definitely take more devices or severely cutting capacity per symbol I suppose.
