@@ -2,9 +2,7 @@
 
 `SystemVerilog` · `Verilator` · `Vivado 2024.1` · `PYNQ` · `Xilinx ZCU104 (xczu7ev)`
 
-NASDAQ ITCH 5.0 market data pipeline for FPGA: MoldUDP64 packets in over
-AXI4-Stream, limit order book reconstructed on-chip, and a preloaded order fires
-when the book hits conditions software set in advance via AXI-Lite.
+NASDAQ ITCH 5.0 market data pipeline for FPGA: MoldUDP64 packets in over AXI4-Stream, limit order book reconstructed on-chip, and a preloaded order fires when the book hits conditions software set in advance via AXI-Lite.
 
 Every number here is measured on the actual board:
 
@@ -17,9 +15,7 @@ Every number here is measured on the actual board:
 | Registers | 3,060 / 460,800 (0.66%) |
 | BRAM / URAM / DSP | 0 / 0 / 0 |
 
-Decision latency is last byte of the ITCH message to `order_fire` asserting. The
-fabric timestamps itself and reports over AXI-Lite. Verilator reports the same 8
-cycles.
+Decision latency is last byte of the ITCH message to `order_fire` asserting. The fabric timestamps itself and reports over AXI-Lite. Verilator reports the same 8 cycles.
 
 ```
 DDR4 → AXI-DMA → async_fifo → moldudp_deframer → itch_parser → order_book → trade_signal
@@ -34,9 +30,7 @@ The order book is three levels, all LUTRAM.
   cycle, so lookup is a fixed number of cycles no matter how many collide.
 - L2 is a price ladder per side (buy/sell).
 - L1 is best bid and ask.
-
-Buckets are 640 bits and BRAM is 72 bits per port, so BRAM would have meant 4
-sequential reads per lookup.
+- Buckets are 640 bits.
 
 ## Layout
 
@@ -69,20 +63,9 @@ build_logs/
     bugs.md                 symptom / cause / fix
 ```
 
-## Verification
-
-Verilator/C++ testbench per module, SVA under `ifdef SIM`, and `tb/book_model.hpp`
-as a golden reference model - std::map, no hashing, no capacity limit, so a bug in
-the design can't hide in the model too. 30k random messages across three seeds in
-simulation, 20k through the same generator on hardware.
-
-Two bugs got past simulation for opposite reasons. bug-13 was a CDC failure only
-visible on silicon. bug-15 was in Verilator all along but my testbenches fed the
-book one message at a time, so it never backpressured and never dropped anything.
-
 ## Quickstart
 
-Requires Verilator, and Vivado 2024.1 for the board flow.
+Requires: Verilator, Vivado 2024.1
 
 1. Simulate:
 
@@ -110,8 +93,7 @@ Requires Verilator, and Vivado 2024.1 for the board flow.
     add_files -fileset constrs_1 fpga/constraints/tick2trade_bd.xdc
 ```
 
-    `create_bd.tcl` does NOT carry that constraint file. Skip it and you get a
-    bitstream with no CDC constraint, and bug-13 comes straight back.
+- `create_bd.tcl` does NOT carry that constraint file; skip it and you get a bitstream with no CDC constraint.
 
 5. Generate the bitstream, then:
 
@@ -119,7 +101,7 @@ Requires Verilator, and Vivado 2024.1 for the board flow.
     bash sw/deploy.sh user@board
 ```
 
-    Board instructions in [sw/README.md](sw/README.md).
+- Board instructions in [sw/README.md](sw/README.md).
 
 ## Roadmap
 
@@ -140,8 +122,3 @@ Part 2:
 - [ ] Ethernet front end, so it's wire-to-trade
 - [ ] Multi-symbol
 - [ ] Other ITCH 5.0 message types besides A/E/D
-
-## Log
-
-`build_logs/journal.md` is what I tried and why, `build_logs/bugs.md` is
-symptom / cause / fix.
