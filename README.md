@@ -1,30 +1,25 @@
 # tick2trade
 
-NASDAQ ITCH 5.0 market data pipeline in FPGA fabric. MoldUDP64 packets go in over
-AXI4-Stream, the limit order book is reconstructed in hardware, and a preloaded
-order fires when the book hits conditions software set in advance.
+`SystemVerilog` · `Verilator` · `Vivado 2024.1` · `PYNQ` · `Xilinx ZCU104 (xczu7ev)`
 
-Running on a Xilinx ZCU104 (xczu7ev). Numbers below are measured on the board.
+NASDAQ ITCH 5.0 market data pipeline in FPGA fabric. MoldUDP64 packets in over
+AXI4-Stream, limit order book reconstructed in hardware, and a preloaded order
+fires when the book hits conditions software set in advance.
 
-## Results
+Every number here is measured on the board.
 
 | | |
 | :-- | :-- |
 | Decision latency | 33.3 ns (8 cycles @ 240 MHz) |
-| Clock, in-system | 240 MHz, +0.125 ns post-route |
+| Clock, in-system | 240 MHz, +0.130 ns post-route |
 | Clock, standalone | 288 MHz out-of-context |
 | LUTs | 20,229 / 230,400 (8.78%) |
 | Registers | 3,060 / 460,800 (0.66%) |
 | BRAM / URAM / DSP | 0 / 0 / 0 |
 
 Decision latency is last byte of the ITCH message to `order_fire` asserting. The
-fabric timestamps itself with a free running counter and reports the difference
-over AXI-Lite, since software can't time a 33 ns event.
-
-Verilator reported the same 8 cycles. The nanoseconds differ only because
-standalone Fmax was 288 MHz and the board runs at 240.
-
-## Pipeline
+fabric timestamps itself and reports over AXI-Lite, since software can't time a
+33 ns event. Verilator reports the same 8 cycles.
 
 ```
 DDR4 → AXI-DMA → async_fifo → moldudp_deframer → itch_parser → order_book → trade_signal
@@ -33,97 +28,97 @@ DDR4 → AXI-DMA → async_fifo → moldudp_deframer → itch_parser → order_b
                                           tick2trade_csr (AXI-Lite from the PS)
 ```
 
-The FIFO is the only clock domain crossing. Gray-coded pointers, two-flop
-synchronisers, `ASYNC_REG` on both pairs. That last part cost me a day (bug-13).
-
-## Two parsing stages
-
-MoldUDP64 is transport, ITCH is content, so they're separate modules.
-
-The deframer handles the UDP envelope and tracks sequence numbers across packets
-to count gaps. The parser reads ITCH byte by byte against the spec offsets,
-handles Add Order / Order Executed / Order Delete, skips everything else by
-length, and filters on `stock_locate`.
-
-Splitting them means the parser works behind anything. NASDAQ's historical files
-are the same ITCH messages with a 2-byte length prefix instead of the UDP
-envelope, so only the deframer would change.
-
-## The order book
-
-- L3 hashes `order_ref_num` into 1024 buckets, 4 entries wide. Every lookup reads
-  all 4 in one access and compares in parallel, so it's constant latency
-  regardless of collisions.
-- L2 is a price ladder per side, 1024 slots, hashed on price.
-- L1 is best bid and best ask.
-
-All LUTRAM. The bucket is 640 bits wide and BRAM/URAM are natively 72 bits per
-port, so BRAM would mean 4 sequential reads per lookup. I picked the width first
-and took the memory type that follows from it.
-
-That's also the timing ceiling. Critical path is a `curr_level` bit reaching 1080
-LUTRAM address pins, 0 logic levels, 97% routing. It's a distance problem.
-
-## The trade signal
-
-Software preloads side, limit price, size, max spread, min resting size over
-AXI-Lite. When the book satisfies all of it the fabric fires. No CPU in the path.
-
-`cfg_armed` resets to 0, so the kill switch defaults to off and software has to
-arm the hardware before it can fire anything.
-
-## Ingest
-
-Over AXI-DMA, not a MAC, so this measures decision latency rather than
-wire-to-trade. The deframer sits behind AXI4-Stream, so a UDP stack would drop in
-without touching the pipeline.
-
-## Verification
-
-Verilator/C++ testbenches per module plus SVA under `ifdef SIM`. Stimulus is back
-to back by default, since real feeds and DMA never pause between bytes and gapped
-stimulus hides FSM bugs at message boundaries.
-
-Simulation still missed a real bug. bug-13 only appears on silicon because
-Verilator has no notion of a voltage between 0 and 1.
-
-## Build
-
-Simulation:
-```
-bash scripts/lint.sh
-```
-
-Out-of-context synth and impl:
-```
-bash scripts/synth.sh
-bash scripts/impl.sh
-```
-
-Board:
-```
-vivado -mode batch -source fpga/scripts/package_ip.tcl
-vivado -mode batch -source fpga/scripts/create_bd.tcl
-```
-`fpga/ip/` is generated and gitignored, so `package_ip.tcl` runs first. Then
-generate the bitstream, copy the `.bit` and `.hwh` to the board, run `sw/run.py`.
+The order book is three levels, all LUTRAM. L3 hashes `order_ref_num` into 1024
+buckets 4 wide, compared in parallel so lookup is constant latency. L2 is a price
+ladder per side. L1 is best bid and ask. Buckets are 640 bits and BRAM is 72 bits
+per port, so BRAM would have meant 4 sequential reads per lookup.
 
 ## Layout
 
 ```
-rtl/         9 SystemVerilog modules
-tb/          Verilator testbenches and ITCH message builders
-fpga/        constraints, Tcl, timing and utilization reports
-sw/          runs on the board: packet generator and PYNQ driver
-build_logs/  journal.md and bugs.md
+rtl/
+    msg_pkg.sv              shared types, hashes, ITCH message lengths
+    skid_buffer.sv          AXI4-Stream pipeline register
+    async_fifo.sv           the CDC, gray pointers + ASYNC_REG
+    moldudp_deframer.sv     UDP envelope, sequence tracking, gap count
+    itch_parser.sv          ITCH bytes to a struct, filters on stock_locate
+    order_book.sv           L3 hash buckets, L2 ladders, L1 top of book
+    trade_signal.sv         fire conditions and kill switch
+    tick2trade_csr.sv       AXI-Lite register file
+    tick2trade_top.sv       wires it together
+tb/
+    book_model.hpp          golden reference model of the book
+    itch_messages.hpp       message builders, shared with sw/
+    tb_*.cpp                one Verilator testbench per module
+fpga/
+    constraints/            OOC constraints and the block design CDC file
+    scripts/                package_ip.tcl, create_bd.tcl, synth, impl
+    results/                timing and utilization reports
+sw/
+    gen_itch.cpp            packet generator, runs on the board
+    run.py                  PYNQ driver, programs the PL and reads counters
+    deploy.sh               copies everything the board needs
+    overlay/                the .bit and .hwh these numbers came from
+build_logs/
+    journal.md              what I tried and why
+    bugs.md                 symptom / cause / fix
 ```
 
-## Scope
+## Verification
 
-One ticker. Multi-symbol means indexing everything by `stock_locate`, and at 100
-symbols that's already 64 Mb, which in production means books across devices.
+Verilator/C++ testbench per module, SVA under `ifdef SIM`, and `tb/book_model.hpp`
+as a golden reference model - std::map, no hashing, no capacity limit, so a bug in
+the design can't hide in the model too. 30k random messages across three seeds in
+simulation, 20k through the same generator on hardware.
 
-## Log
+Two bugs got past simulation for opposite reasons. bug-13 was a CDC failure only
+visible on silicon. bug-15 was in Verilator all along but my testbenches fed the
+book one message at a time, so it never backpressured and never dropped anything.
 
-`build_logs/journal.md` is what I tried and why.
-`build_logs/bugs.md` is symptom / cause / fix.
+## Quickstart
+
+Requires Verilator, and Vivado 2024.1 for the board flow.
+
+1. Simulate:
+```
+    bash scripts/lint.sh
+```
+2. Out-of-context synth and impl:
+```
+    bash scripts/synth.sh
+    bash scripts/impl.sh
+```
+3. Package the RTL as IP (`fpga/ip/` is generated and gitignored):
+```
+    vivado -mode batch -source fpga/scripts/package_ip.tcl
+```
+4. In Vivado, with `ip_repo_paths` pointed at `fpga/ip/`:
+```
+    source fpga/scripts/create_bd.tcl
+    add_files -fileset constrs_1 fpga/constraints/tick2trade_bd.xdc
+```
+    `create_bd.tcl` does NOT carry that constraint file. Skip it and you get a
+    bitstream with no CDC constraint and bug-13 comes back, silently.
+5. Generate the bitstream, then:
+```
+    bash sw/deploy.sh user@board
+```
+    Board instructions in [sw/README.md](sw/README.md).
+
+## Roadmap
+
+### Primary Design
+- [x] MoldUDP64 deframer with sequence gap detection
+- [x] ITCH 5.0 parser (Add / Executed / Delete)
+- [x] Three-level order book in LUTRAM
+- [x] Trade signal with preloaded order and kill switch
+- [x] Golden reference model and randomized regression
+- [x] Running on ZCU104 over AXI-DMA
+
+### Part 2
+- [ ] ASIC flow with Genus/Innovus to find PPA in SRAM over LUTRAM
+- [ ] Replay real NASDAQ ITCH dumps
+- [ ] Scatter-gather DMA for a real throughput number
+- [ ] Ethernet front end, so it's wire-to-trade
+- [ ] Multi-symbol functionality
+- [ ] Other ITCH 5.0 message types besides A/E/D
