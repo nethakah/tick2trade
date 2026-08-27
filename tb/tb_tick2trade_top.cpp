@@ -28,6 +28,11 @@ static constexpr uint32_t REG_LATENCY_MIN = 0x50;
 static constexpr uint32_t REG_LATENCY_MAX = 0x54;
 static constexpr uint32_t REG_PACKET_LATENCY = 0x58;
 
+static constexpr uint32_t REG_BEST_BID_PRICE = 0x20;
+static constexpr uint32_t REG_BEST_ASK_PRICE = 0x28;
+static constexpr uint32_t REG_PACKET_COUNT = 0x38;
+static constexpr uint32_t REG_MISS_COUNT = 0x40;
+
 static uint64_t sim_time = 0;
 
 static void check(uint64_t actual, uint64_t expected, const char *name){

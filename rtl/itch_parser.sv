@@ -45,11 +45,11 @@ module itch_parser
         if (!rst_n) begin
             state <= READ_TYPE;
             byte_index <= '0;
-            if (fsm_tready) begin // only hold high when waiting for acceptance (not dropping after 1 cycle)
+            fsm_tvalid <= '0;
+        end else begin
+            if (fsm_tvalid && fsm_tready) begin
                 fsm_tvalid <= '0;
             end
-        end else begin
-            fsm_tvalid <= '0;
 
             // only transfer when tvalid && tready
             if (s_axis_tvalid && s_axis_tready) begin
