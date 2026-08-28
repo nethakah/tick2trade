@@ -1,6 +1,6 @@
 # tick2trade
 
-`SystemVerilog` · `Verilator` · `Vivado 2024.1` · `PYNQ` · `Xilinx ZCU104 (xczu7ev)`
+`SystemVerilog` · `Verilator/C++` · `Vivado 2024.1` · `PYNQ` · `Xilinx ZCU104 (xczu7ev)`
 
 NASDAQ ITCH 5.0 market data pipeline for FPGA: MoldUDP64 packets in over AXI4-Stream, limit order book reconstructed on-chip, and a preloaded order fires when the book hits conditions software set in advance via AXI-Lite.
 
