@@ -4,8 +4,6 @@
 
 NASDAQ ITCH 5.0 market data pipeline for FPGA: MoldUDP64 packets in over AXI4-Stream, limit order book reconstructed on-chip, and a preloaded order fires when the book hits conditions software set in advance via AXI-Lite.
 
-Every number here is measured on the actual board:
-
 | | |
 | :-- | :-- |
 | Decision latency | 33.3 ns (8 cycles @ 240 MHz) |
@@ -15,19 +13,22 @@ Every number here is measured on the actual board:
 | Registers | 3,060 / 460,800 (0.66%) |
 | BRAM / URAM / DSP | 0 / 0 / 0 |
 
-Decision latency is last byte of the ITCH message to `order_fire` asserting. The fabric timestamps itself and reports over AXI-Lite. Verilator reports the same 8 cycles.
+Decision latency is last byte of the ITCH message to `order_fire` asserting. The fabric timestamps itself and reports over AXI-Lite. Verilator reported the same 8 cycles.
 
+Full Pipeline:
 ```
-DDR4 → AXI-DMA → async_fifo → moldudp_deframer → itch_parser → order_book → trade_signal
-       100 MHz     CDC                        240 MHz
-                                                   ↑
-                                          tick2trade_csr (AXI-Lite from the PS)
+1. DDR4
+2. AXI-DMA (100 MHz)
+3. async_fifo (CDC)
+4. moldudp_deframer
+5. itch_parser (240 MHz)
+6. order_book
+7. trade_signal
 ```
+Note :`tick2trade_csr` (AXI-Lite) feeds control and kill signals into stages 6 and 7 from the PS.
 
-The order book is three levels, all LUTRAM.
-
-- L3 hashes `order_ref_num` into 1024 buckets 4 wide, all compared in the same
-  cycle, so lookup is a fixed number of cycles no matter how many collide.
+The order book is 3 levels of LUTRAM.
+- L3 hashes `order_ref_num` into 1024 buckets 4 wide, compared in parallel, so lookup is a fixed cycle count.
 - L2 is a price ladder per side (buy/sell).
 - L1 is best bid and ask.
 - Buckets are 640 bits.
@@ -122,3 +123,7 @@ Part 2:
 - [ ] Ethernet front end, so it's wire-to-trade
 - [ ] Multi-symbol
 - [ ] Other ITCH 5.0 message types besides A/E/D
+
+## License & Copyright
+
+© 2026 Nethaka Haldo. All rights reserved.
