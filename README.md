@@ -128,5 +128,3 @@ Part 2:
 ## License & Copyright
 
 © 2026 Nethaka Haldo. All rights reserved.
-=======
->>>>>>> c0467b50f80efef8044c8ce9db78dd0bcbced4d5
