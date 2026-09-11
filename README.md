@@ -27,7 +27,7 @@ Overview of the datapath:
 7. trade_signal
 ```
 
-The order book in this project is 3 levels of LUTRAM (see /build_logs/ to see how I came to this).
+The on-chip order book here is 3 levels of LUTRAM (see /build_logs/ to see how I came to this):
 - L3 hashes `order_ref_num` into 1024 buckets 4 wide, compared in parallel to make lookup a fixed cycle count.
 - L2 is a price ladder per side (buy/sell).
 - L1 is best bid and ask.
@@ -64,47 +64,34 @@ build_logs/
 ```
 
 ## Quickstart
-
-Requires: Verilator, Vivado 2024.1
+`REQUIRES: Verilator, Vivado 2024.1`
 
 1. Simulate:
-
 ```
     bash scripts/lint.sh
 ```
-
 2. Out-of-context synth and impl:
-
 ```
     bash scripts/synth.sh
     bash scripts/impl.sh
 ```
-
 3. Package the RTL as IP (`fpga/ip/` is generated and gitignored):
-
 ```
     vivado -mode batch -source fpga/scripts/package_ip.tcl
 ```
-
 4. In Vivado, with `ip_repo_paths` pointed at `fpga/ip/`:
-
 ```
     source fpga/scripts/create_bd.tcl
     add_files -fileset constrs_1 fpga/constraints/tick2trade_bd.xdc
 ```
-
 - `create_bd.tcl` does NOT carry that constraint file; skip it and you get a bitstream with no CDC constraint.
-
 5. Generate the bitstream, then:
-
 ```
     bash sw/deploy.sh user@board
 ```
-
 - Board instructions in [sw/README.md](sw/README.md).
 
 ## Roadmap
-
 Part 1:
 - [x] MoldUDP64 deframer with sequence gap detection
 - [x] ITCH 5.0 parser (Add / Executed / Delete)
@@ -112,7 +99,6 @@ Part 1:
 - [x] Trade signal with preloaded order and kill switch
 - [x] Golden reference model and randomized regression
 - [x] Running on ZCU104 over AXI-DMA
-
 Part 2:
 - [ ] ASIC flow with Genus/Innovus to find PPA in SRAM instead of LUTRAM
 - [ ] Replay real NASDAQ ITCH dumps
@@ -120,8 +106,6 @@ Part 2:
 - [ ] Ethernet front end, so it's wire-to-trade
 - [ ] Multi-symbol
 - [ ] Other ITCH 5.0 message types besides A/E/D
-<<<<<<< HEAD
 
 ## License & Copyright
-
 © 2026 Nethaka Haldo. All rights reserved.
