@@ -13,8 +13,7 @@ Practically: MoldUDP64 packets in over AXI4-Stream, limit order book reconstruct
 | LUTs | 20,229 / 230,400 (8.78%) |
 | Registers | 3,060 / 460,800 (0.66%) |
 | BRAM / URAM / DSP | 0 / 0 / 0 |
-
-Decision latency, in this case, is measuring from the last byte of the ITCH message to `order_fire` asserting (the fabric timestamps itself and reports over AXI-Lite).
+(Note: decision latency, in this case, is measuring from the last byte of the ITCH message to `order_fire` asserting (the fabric timestamps itself and reports over AXI-Lite)).
 
 Overview of the datapath:
 ```
@@ -26,7 +25,6 @@ Overview of the datapath:
 6. order_book             <- tick2trade_csr feeds into this
 7. trade_signal
 ```
-
 The on-chip order book here is 3 levels of LUTRAM (see /build_logs/ to see how I came to this):
 - L3 hashes `order_ref_num` into 1024 buckets 4 wide, compared in parallel to make lookup a fixed cycle count.
 - L2 is a price ladder per side (buy/sell).
@@ -99,7 +97,6 @@ Part 1:
 - [x] Trade signal with preloaded order and kill switch
 - [x] Golden reference model and randomized regression
 - [x] Running on ZCU104 over AXI-DMA
-Part 2:
 - [ ] ASIC flow with Genus/Innovus to find PPA in SRAM instead of LUTRAM
 - [ ] Replay real NASDAQ ITCH dumps
 - [ ] Scatter-gather DMA for a real throughput number
