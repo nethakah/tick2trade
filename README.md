@@ -13,7 +13,8 @@ Practically: MoldUDP64 packets in over AXI4-Stream, limit order book reconstruct
 | LUTs | 20,229 / 230,400 (8.78%) |
 | Registers | 3,060 / 460,800 (0.66%) |
 | BRAM / URAM / DSP | 0 / 0 / 0 |
-(Note: decision latency, in this case, is measuring from the last byte of the ITCH message to `order_fire` asserting (the fabric timestamps itself and reports over AXI-Lite)).
+
+Note: decision latency, in this case, is measuring from the last byte of the ITCH message to `order_fire` asserting (the fabric timestamps itself and reports over AXI-Lite).
 
 Overview of the datapath:
 ```
