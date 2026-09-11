@@ -1,7 +1,7 @@
-# Complete NASDAQ Trading Pipeline on FPGA
+# Complete NASDAQ Trading Pipeline (HFT) on FPGA
 `SystemVerilog` · `Verilator/C++` · `Vivado 2024.1` · `PYNQ` · `Xilinx ZCU104 (XCZU7EV)`
 
-This project is my own build for a NASDAQ ITCH 5.0 market data pipeline. Due to high-frequency trading, no one does this in software nowadays; instead, this is implemented completely on an FPGA board, with configurable thresholds (memory writing in C/C++) to change trading strategies. 
+This project is my own build for a NASDAQ ITCH 5.0 market data pipeline. Due to high-frequency trading (HFT), no one does this in software nowadays; instead, this is implemented completely on an FPGA board, with configurable thresholds (memory writing in C/C++) to change trading strategies. 
 
 Practically: MoldUDP64 packets in over AXI4-Stream, limit order book reconstructed on-chip, and a preloaded order fires when the book hits threshold conditions set via AXI-Lite.
 
