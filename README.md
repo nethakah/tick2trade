@@ -1,10 +1,11 @@
-# tick2trade
+# Complete NASDAQ Trading Pipeline on FPGA
+`SystemVerilog` · `Verilator/C++` · `Vivado 2024.1` · `PYNQ` · `Xilinx ZCU104 (XCZU7EV)`
 
-`SystemVerilog` · `Verilator/C++` · `Vivado 2024.1` · `PYNQ` · `Xilinx ZCU104 (xczu7ev)`
+This project is my own build for a NASDAQ ITCH 5.0 market data pipeline. Due to high-frequency trading, no one does this in software nowadays; instead, this is implemented completely on an FPGA board, with configurable thresholds (memory writing in C/C++) to change trading strategies. 
 
-NASDAQ ITCH 5.0 market data pipeline for FPGA: MoldUDP64 packets in over AXI4-Stream, limit order book reconstructed on-chip, and a preloaded order fires when the book hits conditions software set in advance via AXI-Lite.
+Practically: MoldUDP64 packets in over AXI4-Stream, limit order book reconstructed on-chip, and a preloaded order fires when the book hits threshold conditions set via AXI-Lite.
 
-| | |
+| Metric | Value |
 | :-- | :-- |
 | Decision latency | 33.3 ns (8 cycles @ 240 MHz) |
 | Clock, in-system | 240 MHz, +0.130 ns post-route |
@@ -13,28 +14,26 @@ NASDAQ ITCH 5.0 market data pipeline for FPGA: MoldUDP64 packets in over AXI4-St
 | Registers | 3,060 / 460,800 (0.66%) |
 | BRAM / URAM / DSP | 0 / 0 / 0 |
 
-Decision latency is last byte of the ITCH message to `order_fire` asserting. The fabric timestamps itself and reports over AXI-Lite. Verilator reported the same 8 cycles.
+Decision latency, in this case, is measuring from the last byte of the ITCH message to `order_fire` asserting (the fabric timestamps itself and reports over AXI-Lite).
 
-Full Pipeline:
+Overview of the datapath:
 ```
 1. DDR4
 2. AXI-DMA (100 MHz)
-3. async_fifo (CDC)
+3. async_fifo.sv (CDC)
 4. moldudp_deframer
-5. itch_parser (240 MHz)
-6. order_book
+5. itch_parser (240 MHz)  <- tick2trade_csr feeds into this
+6. order_book             <- tick2trade_csr feeds into this
 7. trade_signal
 ```
-Note :`tick2trade_csr` (AXI-Lite) feeds control and kill signals into stages 6 and 7 from the PS.
 
-The order book is 3 levels of LUTRAM.
-- L3 hashes `order_ref_num` into 1024 buckets 4 wide, compared in parallel, so lookup is a fixed cycle count.
+The order book in this project is 3 levels of LUTRAM (see /build_logs/ to see how I came to this).
+- L3 hashes `order_ref_num` into 1024 buckets 4 wide, compared in parallel to make lookup a fixed cycle count.
 - L2 is a price ladder per side (buy/sell).
 - L1 is best bid and ask.
 - Buckets are 640 bits.
 
 ## Layout
-
 ```
 rtl/
     msg_pkg.sv              shared types, hashes, ITCH message lengths
@@ -107,7 +106,6 @@ Requires: Verilator, Vivado 2024.1
 ## Roadmap
 
 Part 1:
-
 - [x] MoldUDP64 deframer with sequence gap detection
 - [x] ITCH 5.0 parser (Add / Executed / Delete)
 - [x] Three-level order book in LUTRAM
@@ -116,7 +114,6 @@ Part 1:
 - [x] Running on ZCU104 over AXI-DMA
 
 Part 2:
-
 - [ ] ASIC flow with Genus/Innovus to find PPA in SRAM instead of LUTRAM
 - [ ] Replay real NASDAQ ITCH dumps
 - [ ] Scatter-gather DMA for a real throughput number
