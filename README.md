@@ -105,4 +105,6 @@ Part 1:
 - [ ] Other ITCH 5.0 message types besides A/E/D
 
 ## License & Copyright
-© 2026 Nethaka Haldo. All rights reserved.
+Copyright 2026 Nethaka Haldo
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
