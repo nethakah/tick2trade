@@ -14,7 +14,7 @@ Practically: MoldUDP64 packets in over AXI4-Stream, limit order book reconstruct
 | Registers | 3,060 / 460,800 (0.66%) |
 | BRAM / URAM / DSP | 0 / 0 / 0 |
 
-Note: decision latency, in this case, is measuring from the last byte of the ITCH message to `order_fire` asserting (the fabric timestamps itself and reports over AXI-Lite).
+Note: Decision latency, in this case, is measuring from the last byte of the ITCH message to `order_fire` asserting (the fabric timestamps itself and reports over AXI-Lite).
 
 Overview of the datapath:
 ```
@@ -92,8 +92,7 @@ build_logs/
 ```
 - Board instructions in [sw/README.md](sw/README.md).
 
-## Roadmap
-Part 1:
+## Scope/Goals
 - [x] MoldUDP64 deframer with sequence gap detection
 - [x] ITCH 5.0 parser (Add / Executed / Delete)
 - [x] Three-level order book in LUTRAM
